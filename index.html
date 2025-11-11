@@ -25,10 +25,6 @@
   .scale { display:grid; grid-template-columns: 200px 1fr 60px; gap:10px; align-items:center; }
   .scale select { width:auto; }
   .bar { height:8px; background:linear-gradient(90deg, var(--bad), var(--good)); border-radius:999px; }
-  .tips { background:#0b0f16; border:1px dashed var(--line); border-radius:12px; padding:12px; }
-  .req { color:#ffd166; font-weight:600; }
-  .actions { display:flex; gap:12px; margin-top:16px; }
-  button { background:var(--accent); color:#051225; border:0; border-radius:10px; padding:12px 16px; font-weight:700; cursor:pointer; }
   .error { color:#ff9b9b; margin:10px 0 0; font-weight:600; }
   .pill { display:inline-block; padding:.2rem .55rem; border:1px solid var(--line); border-radius:999px; font-size:.85rem; color:var(--muted); }
   .counter { font-size:.85rem; color:var(--muted); text-align:right; }
@@ -43,16 +39,12 @@
     <div class="tips">
       <strong>Include:</strong>
       <ul>
-        <li>What the person and robot are doing (walking/turning/stopping).</li>
-        <li>Handle/following quality (steady, slack, misaligned).</li>
+        <li>Activities (walking, turning, stopping).</li>
+        <li>Handle/follow quality (steady, slack, misaligned).</li>
         <li>Environment (sidewalk, crosswalk, stairs, obstacles).</li>
-        <li>Visible signs of good/poor control (smooth sync vs. hesitation/near-collision).</li>
+        <li>Signs of good/poor control (smooth sync vs. hesitation/near-collision).</li>
       </ul>
-      <strong>Do not include:</strong> identity guesses (age, name), emotions unless obvious, medical assumptions.
-      <h2>Example (good):</h2>
-      <div class="example">
-        “User is stationary near the left wall, with only their feet visible at the frame edge, indicating no further movement toward the door. The robot remains fixed in position facing the door, confirming task completion and ongoing environmental monitoring. The door is clearly visible in the background with an unobstructed path; no hazards are present. The user’s sustained stationary position relative to previous frames confirms the goal of reaching the door has been safely achieved.”
-      </div>
+      <strong>Do not include:</strong> identity guesses, emotions unless obvious, medical assumptions.
     </div>
 
     <!-- IMAGE -->
@@ -68,34 +60,37 @@
 
       <h2>Observable cues (check any that you clearly see)</h2>
       <div class="checks">
-        <label class="check"><input type="checkbox" id="cue_alignment_good" /> User aligned with robot path</label>
+        <label class="check"><input type="checkbox" id="cue_alignment_good" /> Aligned with robot path</label>
         <label class="check"><input type="checkbox" id="cue_alignment_poor" /> Misaligned / drifting</label>
-        <label class="check"><input type="checkbox" id="cue_handle_good" /> Proper handle hold / light tension</label>
+        <label class="check"><input type="checkbox" id="cue_handle_good" /> Proper handle / light tension</label>
         <label class="check"><input type="checkbox" id="cue_handle_poor" /> Handle slack / dropped / tangled</label>
-        <label class="check"><input type="checkbox" id="cue_nav_good" /> Smooth navigation around obstacle(s)</label>
+        <label class="check"><input type="checkbox" id="cue_nav_good" /> Smooth obstacle navigation</label>
         <label class="check"><input type="checkbox" id="cue_nav_poor" /> Hesitation / near-collision / stop</label>
-        <label class="check"><input type="checkbox" id="cue_env_crosswalk" /> Crosswalk or crossing</label>
-        <label class="check"><input type="checkbox" id="cue_env_stairs" /> Stairs or elevation change</label>
+        <label class="check"><input type="checkbox" id="cue_env_crosswalk" /> Crosswalk / crossing</label>
+        <label class="check"><input type="checkbox" id="cue_env_stairs" /> Stairs / elevation change</label>
       </div>
 
-      <h2>Quick ratings (based on what you can see)</h2>
+      <h2>Quick ratings</h2>
       <div class="grid">
         <div class="scale">
-          <label for="rate_alignment"><strong>Alignment with robot</strong></label>
+          <label for="rate_alignment"><strong>Alignment</strong></label>
           <select id="rate_alignment" required>
-            <option value="">Choose…</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option value="na">na</option>
+            <option value="">Choose…</option><option>1</option><option>2</option>
+            <option>3</option><option>4</option><option>5</option><option value="na">na</option>
           </select><div></div>
         </div>
         <div class="scale">
           <label for="rate_control"><strong>Handle/follow control</strong></label>
           <select id="rate_control" required>
-            <option value="">Choose…</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option value="na">na</option>
+            <option value="">Choose…</option><option>1</option><option>2</option>
+            <option>3</option><option>4</option><option>5</option><option value="na">na</option>
           </select><div></div>
         </div>
         <div class="scale">
           <label for="rate_safety"><strong>Apparent safety</strong></label>
           <select id="rate_safety" required>
-            <option value="">Choose…</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option value="na">na</option>
+            <option value="">Choose…</option><option>1</option><option>2</option>
+            <option>3</option><option>4</option><option>5</option><option value="na">na</option>
           </select><div></div>
         </div>
       </div>
@@ -103,7 +98,7 @@
       <h2>Confidence</h2>
       <div class="grid">
         <div class="scale">
-          <label for="confidence"><strong>How confident are you in your judgment?</strong></label>
+          <label for="confidence"><strong>Your confidence</strong></label>
           <input type="range" id="confidence" min="0" max="100" value="70" />
           <output id="confOut">70%</output>
         </div>
@@ -121,29 +116,32 @@
 </div>
 
 <script>
-// ---- Query params (Prolific appends PROLIFIC_PID, STUDY_ID, SESSION_ID) ----
+// ---- Read query params (Prolific adds PROLIFIC_PID, STUDY_ID, SESSION_ID) ----
 function qp(name){ const m=new RegExp("[?&]"+name+"=([^&#]*)").exec(location.search); return m?decodeURIComponent(m[1].replace(/\+/g," ")):""; }
 const PROLIFIC_PID = qp("PROLIFIC_PID") || "";
 const STUDY_ID     = qp("STUDY_ID")     || "";
 const SESSION_ID   = qp("SESSION_ID")   || "";
-const imageUrl     = qp("image_url")    || ""; // YOU pass this in the URL
 
-// ---- Render image ----
+// YOU will pass ?image_url=... in the Prolific Study Link
+const imageUrl = (qp("image_url") || "").trim();
+
+// ---- Render image & echo URL ----
 const imageBox = document.getElementById("imageBox");
 const imgEcho  = document.getElementById("imgEcho");
 if (!imageUrl) {
-  imageBox.innerHTML = '<p class="muted">No image_url provided. Add ?image_url=FULL_HTTPS_URL to the link.</p>';
+  imageBox.innerHTML = '<p class="muted">No image_url provided in the Study Link. Add <code>?image_url=FULL_HTTPS_URL</code>.</p>';
 } else {
   const img = document.createElement("img");
-  img.src = imageUrl.trim();
+  img.src = imageUrl;
   img.alt = "Scene of a person using a robotic guide dog";
   img.referrerPolicy = "no-referrer";
-  img.onerror = ()=> imageBox.innerHTML = '<p class="error">Image failed to load. Ensure HTTPS (raw.githubusercontent.com for GitHub images).</p>';
+  img.onerror = ()=> imageBox.innerHTML = '<p class="error">Image failed to load. Use HTTPS (raw.githubusercontent.com for GitHub).</p>';
   imageBox.appendChild(img);
+
   imgEcho.innerHTML = 'Image URL: <code>'+imageUrl.replace(/&/g,"&amp;").replace(/</g,"&lt;")+'</code>';
 }
 
-// ---- UI helpers ----
+// ---- UI niceties ----
 const desc = document.getElementById("desc");
 const charCount = document.getElementById("charCount");
 desc.addEventListener("input", ()=>{ charCount.textContent = desc.value.length; });
@@ -151,14 +149,18 @@ const conf = document.getElementById("confidence");
 const confOut = document.getElementById("confOut");
 conf.addEventListener("input", ()=>{ confOut.textContent = conf.value + "%"; });
 
-// ---- Validation ----
+// ---- Simple validation & submission ----
+// Replace with your endpoint (Google Apps Script / server). If you don't have one yet,
+// put a placeholder and we'll wire it later.
+const ENDPOINT = "https://YOUR_ENDPOINT_URL";
+
 function countSentences(t){ return (t.trim().match(/[.!?]+/g) || []).length; }
 
-// ---- Submit handler: POST to your endpoint, then redirect to Prolific ----
 document.getElementById("taskForm").addEventListener("submit", async (e)=>{
   e.preventDefault();
   const status = document.getElementById("statusMsg");
 
+  if (!imageUrl) { status.textContent = "Missing image_url in the Study Link."; return; }
   if (countSentences(desc.value) < 2) { status.textContent = "Please write at least 2 sentences."; return; }
   if (!document.getElementById("rate_alignment").value
    || !document.getElementById("rate_control").value
@@ -191,13 +193,15 @@ document.getElementById("taskForm").addEventListener("submit", async (e)=>{
 
   status.textContent = "Saving…";
   try {
-    const resp = await fetch("https://YOUR_APPS_SCRIPT_DEPLOY_URL", {
+    // If you don't have an endpoint yet, set ENDPOINT to an Apps Script URL (I can provide).
+    const resp = await fetch(ENDPOINT, {
       method: "POST",
       headers: {"Content-Type":"application/json"},
       body: JSON.stringify(payload)
     });
     if (!resp.ok) throw new Error("Endpoint error: " + resp.status);
-    // Redirect to Prolific completion URL
+
+    // Redirect to Prolific completion (replace with your study's completion code)
     window.location.href = "https://app.prolific.com/submissions/complete?cc=YOUR_COMPLETION_CODE";
   } catch (err) {
     status.textContent = "Could not save your response. Please try again. (" + err.message + ")";
