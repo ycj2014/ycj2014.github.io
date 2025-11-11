@@ -166,46 +166,45 @@ document.getElementById("taskForm").addEventListener("submit", async (e)=>{
    || !document.getElementById("rate_control").value
    || !document.getElementById("rate_safety").value) { status.textContent = "Please complete all three ratings."; return; }
   if (!document.getElementById("attn").checked) { status.textContent = "Please confirm the attention check."; return; }
+const payload = {
+  prolific_pid: PROLIFIC_PID,
+  study_id: STUDY_ID,
+  session_id: SESSION_ID,
+  image_url: imageUrl,
+  desc: desc.value.trim(),
+  rate_alignment: document.getElementById("rate_alignment").value,
+  rate_control: document.getElementById("rate_control").value,
+  rate_safety: document.getElementById("rate_safety").value,
+  confidence: document.getElementById("confidence").value,
+  cues: {
+    alignment_good: document.getElementById("cue_alignment_good").checked ? 1 : 0,
+    alignment_poor: document.getElementById("cue_alignment_poor").checked ? 1 : 0,
+    handle_good: document.getElementById("cue_handle_good").checked ? 1 : 0,
+    handle_poor: document.getElementById("cue_handle_poor").checked ? 1 : 0,
+    nav_good: document.getElementById("cue_nav_good").checked ? 1 : 0,
+    nav_poor: document.getElementById("cue_nav_poor").checked ? 1 : 0,
+    env_crosswalk: document.getElementById("cue_env_crosswalk").checked ? 1 : 0,
+    env_stairs: document.getElementById("cue_env_stairs").checked ? 1 : 0
+  },
+  ts: new Date().toISOString(),
+  ua: navigator.userAgent
+};
 
-  const payload = {
-    prolific_pid: PROLIFIC_PID,
-    study_id: STUDY_ID,
-    session_id: SESSION_ID,
-    image_url: imageUrl,
-    desc: desc.value.trim(),
-    rate_alignment: document.getElementById("rate_alignment").value,
-    rate_control: document.getElementById("rate_control").value,
-    rate_safety: document.getElementById("rate_safety").value,
-    confidence: document.getElementById("confidence").value,
-    cues: {
-      alignment_good: document.getElementById("cue_alignment_good").checked ? 1 : 0,
-      alignment_poor: document.getElementById("cue_alignment_poor").checked ? 1 : 0,
-      handle_good: document.getElementById("cue_handle_good").checked ? 1 : 0,
-      handle_poor: document.getElementById("cue_handle_poor").checked ? 1 : 0,
-      nav_good: document.getElementById("cue_nav_good").checked ? 1 : 0,
-      nav_poor: document.getElementById("cue_nav_poor").checked ? 1 : 0,
-      env_crosswalk: document.getElementById("cue_env_crosswalk").checked ? 1 : 0,
-      env_stairs: document.getElementById("cue_env_stairs").checked ? 1 : 0
-    },
-    ts: new Date().toISOString(),
-    ua: navigator.userAgent
-  };
+status.textContent = "Saving…";
 
-  status.textContent = "Saving…";
-  try {
-    // If you don't have an endpoint yet, set ENDPOINT to an Apps Script URL (I can provide).
-    const resp = await fetch(ENDPOINT, {
-      method: "POST",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(payload)
-    });
-    if (!resp.ok) throw new Error("Endpoint error: " + resp.status);
+try {
+  const body = new URLSearchParams({ data: JSON.stringify(payload) }).toString();
+  const resp = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body
+  });
 
-    // Redirect to Prolific completion (replace with your study's completion code)
-    window.location.href = "https://app.prolific.com/submissions/complete?cc=YOUR_COMPLETION_CODE";
-  } catch (err) {
-    status.textContent = "Could not save your response. Please try again. (" + err.message + ")";
-  }
+  if (!resp.ok) throw new Error("Endpoint error: " + resp.status);
+  window.location.href = "https://app.prolific.com/submissions/complete?cc=YOUR_COMPLETION_CODE";
+} catch (err) {
+  status.textContent = "Could not save your response. Please try again. (" + err.message + ")";
+}
 });
 </script>
 </body>
