@@ -6,7 +6,7 @@
 <title>Robotic Guide Dog — Image Summarization</title>
 <style>
   :root { --bg:#0b0c10; --card:#11141a; --ink:#e8f0fe; --muted:#a8b3c7; --line:#232834; --accent:#7aa2ff; --good:#29c17e; --bad:#ff6b6b; }
-  html,body { background:var(--bg); color:var(--ink); font:16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin:0; }
+  html,body { background:var(--bg); color:var(--ink); font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; margin:0; }
   .wrap { max-width:980px; margin:24px auto; padding:0 16px; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:0 8px 30px rgba(0,0,0,.25); }
   h1 { font-size:1.35rem; margin:0 0 10px; }
@@ -14,7 +14,7 @@
   p, li, label, small { color:var(--ink); }
   .muted { color:var(--muted); }
   .grid { display:grid; grid-template-columns:1fr; gap:18px; }
-  .imgbox { background:#0a0d12; border:1px solid var(--line); border-radius:12px; padding:12px; }
+  .imgbox { background:#0a0d12; border:1px solid var(--line); border-radius:12px; padding:12px; min-height:120px; display:flex; align-items:center; justify-content:center; }
   .imgbox img { width:100%; height:auto; display:block; border-radius:8px; }
   .label { font-weight:600; margin:8px 0 6px; display:block; }
   textarea { width:100%; min-height:120px; resize:vertical; background:#0b0f16; color:#e8f0fe; border:1px solid var(--line); border-radius:10px; padding:12px; }
@@ -23,38 +23,35 @@
   @media (max-width:640px){ .checks{grid-template-columns:1fr;} }
   .check { background:#0b0f16; border:1px solid var(--line); border-radius:10px; padding:10px; }
   .scale { display:grid; grid-template-columns: 200px 1fr 60px; gap:10px; align-items:center; }
-  .scale select { width:auto; }
   .bar { height:8px; background:linear-gradient(90deg, var(--bad), var(--good)); border-radius:999px; }
-  .error { color:#ff9b9b; margin:10px 0 0; font-weight:600; }
+  .actions { display:flex; gap:12px; margin-top:16px; }
+  button { background:var(--accent); color:#051225; border:0; border-radius:10px; padding:12px 16px; font-weight:700; cursor:pointer; }
+  .error { color:#ff9b9b; margin-top:10px; font-weight:600; }
   .pill { display:inline-block; padding:.2rem .55rem; border:1px solid var(--line); border-radius:999px; font-size:.85rem; color:var(--muted); }
   .counter { font-size:.85rem; color:var(--muted); text-align:right; }
+  .progressline { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:6px 0 12px; color:var(--muted); }
+  .progressbar { flex:1; height:8px; background:#0b0f16; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+  .progressfill { height:100%; width:0%; background:linear-gradient(90deg, var(--bad), var(--good)); }
+  .tip { font-size:.9rem; color:var(--muted); }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>Describe Scenes with a Robotic Guide Dog <span class="pill">2–3 sentences required</span></h1>
-    <p class="muted">Focus on what the person and robot are doing, how well the person follows/controls the robot, and environmental factors (obstacles, crossings, crowds). Be objective and specific.</p>
+    <h1>Describe Scenes with a Robotic Guide Dog <span class="pill">Finish all items</span></h1>
+    <p class="muted">Be objective and specific. Focus on interaction/handling, alignment, obstacles/crossings, and apparent safety.</p>
 
-    <div class="tips">
-      <strong>Include:</strong>
-      <ul>
-        <li>Activities (walking, turning, stopping).</li>
-        <li>Handle/follow quality (steady, slack, misaligned).</li>
-        <li>Environment (sidewalk, crosswalk, stairs, obstacles).</li>
-        <li>Signs of good/poor control (smooth sync vs. hesitation/near-collision).</li>
-      </ul>
-      <strong>Do not include:</strong> identity guesses, emotions unless obvious, medical assumptions.
+    <div class="progressline">
+      <div id="progressText">Loading tasks…</div>
+      <div class="progressbar"><div id="progressFill" class="progressfill"></div></div>
     </div>
 
-    <!-- IMAGE -->
     <h2>Image</h2>
-    <div class="imgbox" id="imageBox"></div>
+    <div class="imgbox" id="imageBox"><span class="tip">Loading image…</span></div>
     <p class="muted" id="imgEcho"></p>
 
-    <!-- FORM -->
     <form id="taskForm">
-      <label for="desc" class="label">Your objective description <span class="req">(2–3 sentences)</span></label>
+      <label for="desc" class="label">Your objective description <span class="pill">2–3 sentences</span></label>
       <textarea id="desc" required placeholder="Describe the interaction and control, and relevant environment."></textarea>
       <div class="counter"><span id="charCount">0</span> characters</div>
 
@@ -108,102 +105,190 @@
       <label class="label"><input type="checkbox" id="attn" required /> Attention check: I read the instructions.</label>
 
       <div class="actions">
-        <button type="submit">Submit</button>
+        <button id="nextBtn" type="button">Save & Next</button>
       </div>
       <p class="muted" id="statusMsg"></p>
+      <p class="error" id="errorMsg"></p>
     </form>
   </div>
 </div>
 
 <script>
-// ---- Read query params (Prolific adds PROLIFIC_PID, STUDY_ID, SESSION_ID) ----
+// ---------- Config ----------
+const ENDPOINT = "REPLACE_WITH_YOUR_APPS_SCRIPT_EXEC_URL"; // e.g. https://script.google.com/macros/s/AKfycb.../exec
+const COMPLETION_URL = "https://app.prolific.com/submissions/complete?cc=YOUR_COMPLETION_CODE";
+
+// ---------- Helpers ----------
 function qp(name){ const m=new RegExp("[?&]"+name+"=([^&#]*)").exec(location.search); return m?decodeURIComponent(m[1].replace(/\+/g," ")):""; }
+function countSentences(t){ return (t.trim().match(/[.!?]+/g) || []).length; }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+
+// Prolific IDs (if present)
 const PROLIFIC_PID = qp("PROLIFIC_PID") || "";
 const STUDY_ID     = qp("STUDY_ID")     || "";
 const SESSION_ID   = qp("SESSION_ID")   || "";
 
-// YOU will pass ?image_url=... in the Prolific Study Link
-const imageUrl = (qp("image_url") || "").trim();
+// Progress state keys (resume support)
+const PROG_KEY = `rgd_progress_${PROLIFIC_PID || "anon"}_${STUDY_ID || "nostudy"}`;
 
-// ---- Render image & echo URL ----
-const imageBox = document.getElementById("imageBox");
-const imgEcho  = document.getElementById("imgEcho");
-if (!imageUrl) {
-  imageBox.innerHTML = '<p class="muted">No image_url provided in the Study Link. Add <code>?image_url=FULL_HTTPS_URL</code>.</p>';
-} else {
-  const img = document.createElement("img");
-  img.src = imageUrl;
-  img.alt = "Scene of a person using a robotic guide dog";
-  img.referrerPolicy = "no-referrer";
-  img.onerror = ()=> imageBox.innerHTML = '<p class="error">Image failed to load. Use HTTPS (raw.githubusercontent.com for GitHub).</p>';
-  imageBox.appendChild(img);
-}
+// UI refs
+const imageBox   = document.getElementById("imageBox");
+const imgEcho    = document.getElementById("imgEcho");
+const desc       = document.getElementById("desc");
+const charCount  = document.getElementById("charCount");
+const statusMsg  = document.getElementById("statusMsg");
+const errorMsg   = document.getElementById("errorMsg");
+const nextBtn    = document.getElementById("nextBtn");
+const conf       = document.getElementById("confidence");
+const confOut    = document.getElementById("confOut");
+const progressText = document.getElementById("progressText");
+const progressFill = document.getElementById("progressFill");
 
-// ---- UI niceties ----
-const desc = document.getElementById("desc");
-const charCount = document.getElementById("charCount");
+// Live UI niceties
 desc.addEventListener("input", ()=>{ charCount.textContent = desc.value.length; });
-const conf = document.getElementById("confidence");
-const confOut = document.getElementById("confOut");
 conf.addEventListener("input", ()=>{ confOut.textContent = conf.value + "%"; });
 
-// ---- Simple validation & submission ----
-// Replace with your endpoint (Google Apps Script / server). If you don't have one yet,
-// put a placeholder and we'll wire it later.
-const ENDPOINT = "https://script.google.com/macros/s/AKfycbxudk9gIKW_YSGrSCp8Yz1kqKb7sTdro0diiVfWf7rAhwqCqB7wTwGzBAaxXL-m9VI5kQ/exec";
+// ---------- CSV load ----------
+let rows = []; // array of image_url strings
+let idx = 0;   // current index
+let total = 0;
 
-function countSentences(t){ return (t.trim().match(/[.!?]+/g) || []).length; }
+async function loadCSV() {
+  // cache-busting to avoid GitHub Pages caching while you iterate
+  const resp = await fetch("input.csv?ts=" + Date.now(), { cache: "no-store" });
+  if (!resp.ok) throw new Error("input.csv not found");
+  const text = await resp.text();
 
-document.getElementById("taskForm").addEventListener("submit", async (e)=>{
-  e.preventDefault();
-  const status = document.getElementById("statusMsg");
+  // Minimal CSV parse (first column named image_url). Assumes no commas inside URLs.
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) throw new Error("input.csv has no data rows");
+  const header = lines[0].split(",").map(h => h.trim().toLowerCase());
+  const col = header.indexOf("image_url");
+  if (col === -1) throw new Error("Header 'image_url' not found in input.csv");
 
-  if (!imageUrl) { status.textContent = "Missing image_url in the Study Link."; return; }
-  if (countSentences(desc.value) < 2) { status.textContent = "Please write at least 2 sentences."; return; }
+  rows = lines.slice(1).map(line => {
+    const parts = line.split(",");
+    return (parts[col] || "").trim();
+  }).filter(u => !!u);
+
+  total = rows.length;
+}
+
+// ---------- Progress persistence ----------
+function saveProgress(i){ try { localStorage.setItem(PROG_KEY, String(i)); } catch(e){} }
+function loadProgress(){ try { return parseInt(localStorage.getItem(PROG_KEY) || "0", 10); } catch(e){ return 0; } }
+
+// ---------- Render one item ----------
+function updateProgressUI() {
+  progressText.textContent = `Item ${Math.min(idx + 1, total)} of ${total}`;
+  const pct = total ? Math.round((idx / total) * 100) : 0;
+  progressFill.style.width = pct + "%";
+}
+
+function renderCurrent() {
+  errorMsg.textContent = "";
+  statusMsg.textContent = "";
+  updateProgressUI();
+
+  if (idx >= total) {
+    // Finished all
+    imageBox.innerHTML = '<h2>✅ All items completed!</h2><p class="muted">Click the button below to finish the study.</p>';
+    imgEcho.innerHTML = "";
+    nextBtn.textContent = "Finish & Return to Prolific";
+    nextBtn.onclick = () => { window.location.href = COMPLETION_URL; };
+    return;
+  }
+
+  const url = rows[idx];
+  imageBox.innerHTML = '<span class="tip">Loading image…</span>';
+  const img = document.createElement("img");
+  img.src = url;
+  img.alt = `Scene ${idx+1}`;
+  img.referrerPolicy = "no-referrer";
+  img.onload = () => { imageBox.innerHTML = ""; imageBox.appendChild(img); };
+  img.onerror = () => { imageBox.innerHTML = '<p class="error">Image failed to load. Check HTTPS or URL path.</p>'; };
+  imgEcho.innerHTML = 'Image URL: <code>' + esc(url) + '</code>';
+
+  // Reset form fields between items
+  desc.value = "";
+  charCount.textContent = "0";
+  ["rate_alignment","rate_control","rate_safety"].forEach(id => document.getElementById(id).value = "");
+  ["cue_alignment_good","cue_alignment_poor","cue_handle_good","cue_handle_poor","cue_nav_good","cue_nav_poor","cue_env_crosswalk","cue_env_stairs"].forEach(id => document.getElementById(id).checked = false);
+  document.getElementById("attn").checked = false;
+
+  nextBtn.textContent = (idx === total - 1) ? "Save & Finish" : "Save & Next";
+  nextBtn.onclick = submitCurrent;
+}
+
+// ---------- Submit one item ----------
+async function submitCurrent() {
+  // Validate
+  if (countSentences(desc.value) < 2) { errorMsg.textContent = "Write at least 2 sentences."; return; }
   if (!document.getElementById("rate_alignment").value
    || !document.getElementById("rate_control").value
-   || !document.getElementById("rate_safety").value) { status.textContent = "Please complete all three ratings."; return; }
-  if (!document.getElementById("attn").checked) { status.textContent = "Please confirm the attention check."; return; }
-const payload = {
-  prolific_pid: PROLIFIC_PID,
-  study_id: STUDY_ID,
-  session_id: SESSION_ID,
-  image_url: imageUrl,
-  desc: desc.value.trim(),
-  rate_alignment: document.getElementById("rate_alignment").value,
-  rate_control: document.getElementById("rate_control").value,
-  rate_safety: document.getElementById("rate_safety").value,
-  confidence: document.getElementById("confidence").value,
-  cues: {
-    alignment_good: document.getElementById("cue_alignment_good").checked ? 1 : 0,
-    alignment_poor: document.getElementById("cue_alignment_poor").checked ? 1 : 0,
-    handle_good: document.getElementById("cue_handle_good").checked ? 1 : 0,
-    handle_poor: document.getElementById("cue_handle_poor").checked ? 1 : 0,
-    nav_good: document.getElementById("cue_nav_good").checked ? 1 : 0,
-    nav_poor: document.getElementById("cue_nav_poor").checked ? 1 : 0,
-    env_crosswalk: document.getElementById("cue_env_crosswalk").checked ? 1 : 0,
-    env_stairs: document.getElementById("cue_env_stairs").checked ? 1 : 0
-  },
-  ts: new Date().toISOString(),
-  ua: navigator.userAgent
-};
+   || !document.getElementById("rate_safety").value) { errorMsg.textContent = "Complete all three ratings."; return; }
+  if (!document.getElementById("attn").checked) { errorMsg.textContent = "Confirm attention check."; return; }
 
-status.textContent = "Saving…";
+  // Build payload
+  const payload = {
+    prolific_pid: PROLIFIC_PID,
+    study_id: STUDY_ID,
+    session_id: SESSION_ID,
+    index: idx,
+    total: total,
+    image_url: rows[idx],
+    desc: desc.value.trim(),
+    rate_alignment: document.getElementById("rate_alignment").value,
+    rate_control: document.getElementById("rate_control").value,
+    rate_safety: document.getElementById("rate_safety").value,
+    confidence: document.getElementById("confidence").value,
+    cues: {
+      alignment_good: document.getElementById("cue_alignment_good").checked ? 1 : 0,
+      alignment_poor: document.getElementById("cue_alignment_poor").checked ? 1 : 0,
+      handle_good: document.getElementById("cue_handle_good").checked ? 1 : 0,
+      handle_poor: document.getElementById("cue_handle_poor").checked ? 1 : 0,
+      nav_good: document.getElementById("cue_nav_good").checked ? 1 : 0,
+      nav_poor: document.getElementById("cue_nav_poor").checked ? 1 : 0,
+      env_crosswalk: document.getElementById("cue_env_crosswalk").checked ? 1 : 0,
+      env_stairs: document.getElementById("cue_env_stairs").checked ? 1 : 0
+    },
+    ts: new Date().toISOString(),
+    ua: navigator.userAgent
+  };
 
-try {
-  const body = new URLSearchParams({ data: JSON.stringify(payload) }).toString();
-  const resp = await fetch(ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body
-  });
+  // POST as x-www-form-urlencoded to avoid CORS preflight
+  statusMsg.textContent = "Saving…";
+  errorMsg.textContent = "";
+  try {
+    const body = new URLSearchParams({ data: JSON.stringify(payload) }).toString();
+    const resp = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body
+    });
+    if (!resp.ok) throw new Error("Endpoint error: " + resp.status);
 
-  if (!resp.ok) throw new Error("Endpoint error: " + resp.status);
-  window.location.href = "https://app.prolific.com/submissions/complete?cc=YOUR_COMPLETION_CODE";
-} catch (err) {
-  status.textContent = "Could not save your response. Please try again. (" + err.message + ")";
+    // Advance
+    idx += 1;
+    saveProgress(idx);
+    renderCurrent();
+  } catch (err) {
+    errorMsg.textContent = "Could not save. Please try again. (" + err.message + ")";
+  } finally {
+    statusMsg.textContent = "";
+  }
 }
-});
+
+// ---------- Init ----------
+(async function init(){
+  try {
+    await loadCSV();
+    idx = Math.max(0, Math.min(loadProgress(), (rows.length - 1)));
+    renderCurrent();
+  } catch (e) {
+    imageBox.innerHTML = '<p class="error">Error: ' + esc(e.message) + '</p>';
+  }
+})();
 </script>
 </body>
 </html>
