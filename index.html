@@ -137,8 +137,6 @@ if (!imageUrl) {
   img.referrerPolicy = "no-referrer";
   img.onerror = ()=> imageBox.innerHTML = '<p class="error">Image failed to load. Use HTTPS (raw.githubusercontent.com for GitHub).</p>';
   imageBox.appendChild(img);
-
-  imgEcho.innerHTML = 'Image URL: <code>'+imageUrl.replace(/&/g,"&amp;").replace(/</g,"&lt;")+'</code>';
 }
 
 // ---- UI niceties ----
