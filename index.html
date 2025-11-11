@@ -1,55 +1,208 @@
-// ===== Apps Script (Google Sheets collector) =====
-// 1) Create a Google Sheet and copy its ID from the URL.
-// 2) Paste the Sheet ID below.
-// 3) Deploy as Web App (execute as Me, accessible to Anyone).
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Robotic Guide Dog — Image Summarization</title>
+<style>
+  :root { --bg:#0b0c10; --card:#11141a; --ink:#e8f0fe; --muted:#a8b3c7; --line:#232834; --accent:#7aa2ff; --good:#29c17e; --bad:#ff6b6b; }
+  html,body { background:var(--bg); color:var(--ink); font:16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin:0; }
+  .wrap { max-width:980px; margin:24px auto; padding:0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:0 8px 30px rgba(0,0,0,.25); }
+  h1 { font-size:1.35rem; margin:0 0 10px; }
+  h2 { font-size:1.05rem; margin:20px 0 8px; color:var(--muted); }
+  p, li, label, small { color:var(--ink); }
+  .muted { color:var(--muted); }
+  .grid { display:grid; grid-template-columns:1fr; gap:18px; }
+  .imgbox { background:#0a0d12; border:1px solid var(--line); border-radius:12px; padding:12px; }
+  .imgbox img { width:100%; height:auto; display:block; border-radius:8px; }
+  .label { font-weight:600; margin:8px 0 6px; display:block; }
+  textarea { width:100%; min-height:120px; resize:vertical; background:#0b0f16; color:#e8f0fe; border:1px solid var(--line); border-radius:10px; padding:12px; }
+  select, input[type="text"] { width:100%; background:#0b0f16; color:#e8f0fe; border:1px solid var(--line); border-radius:10px; padding:10px; }
+  .checks { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:640px){ .checks{grid-template-columns:1fr;} }
+  .check { background:#0b0f16; border:1px solid var(--line); border-radius:10px; padding:10px; }
+  .scale { display:grid; grid-template-columns: 200px 1fr 60px; gap:10px; align-items:center; }
+  .scale select { width:auto; }
+  .bar { height:8px; background:linear-gradient(90deg, var(--bad), var(--good)); border-radius:999px; }
+  .tips { background:#0b0f16; border:1px dashed var(--line); border-radius:12px; padding:12px; }
+  .req { color:#ffd166; font-weight:600; }
+  .actions { display:flex; gap:12px; margin-top:16px; }
+  button { background:var(--accent); color:#051225; border:0; border-radius:10px; padding:12px 16px; font-weight:700; cursor:pointer; }
+  .error { color:#ff9b9b; margin:10px 0 0; font-weight:600; }
+  .pill { display:inline-block; padding:.2rem .55rem; border:1px solid var(--line); border-radius:999px; font-size:.85rem; color:var(--muted); }
+  .counter { font-size:.85rem; color:var(--muted); text-align:right; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Describe Scenes with a Robotic Guide Dog <span class="pill">2–3 sentences required</span></h1>
+    <p class="muted">Focus on what the person and robot are doing, how well the person follows/controls the robot, and environmental factors (obstacles, crossings, crowds). Be objective and specific.</p>
 
-const SHEET_ID = "PASTE_YOUR_SHEET_ID_HERE";
-const SHEET_NAME = "responses"; // Will be created if missing
+    <div class="tips">
+      <strong>Include:</strong>
+      <ul>
+        <li>What the person and robot are doing (walking/turning/stopping).</li>
+        <li>Handle/following quality (steady, slack, misaligned).</li>
+        <li>Environment (sidewalk, crosswalk, stairs, obstacles).</li>
+        <li>Visible signs of good/poor control (smooth sync vs. hesitation/near-collision).</li>
+      </ul>
+      <strong>Do not include:</strong> identity guesses (age, name), emotions unless obvious, medical assumptions.
+      <h2>Example (good):</h2>
+      <div class="example">
+        “User is stationary near the left wall, with only their feet visible at the frame edge, indicating no further movement toward the door. The robot remains fixed in position facing the door, confirming task completion and ongoing environmental monitoring. The door is clearly visible in the background with an unobstructed path; no hazards are present. The user’s sustained stationary position relative to previous frames confirms the goal of reaching the door has been safely achieved.”
+      </div>
+    </div>
 
-function doPost(e) {
-  try {
-    const ss = SpreadsheetApp.openById(SHEET_ID);
-    const sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+    <!-- IMAGE -->
+    <h2>Image</h2>
+    <div class="imgbox" id="imageBox"></div>
+    <p class="muted" id="imgEcho"></p>
 
-    const data = JSON.parse(e.postData.contents);
+    <!-- FORM -->
+    <form id="taskForm">
+      <label for="desc" class="label">Your objective description <span class="req">(2–3 sentences)</span></label>
+      <textarea id="desc" required placeholder="Describe the interaction and control, and relevant environment."></textarea>
+      <div class="counter"><span id="charCount">0</span> characters</div>
 
-    // Create header row if empty
-    if (sheet.getLastRow() === 0) {
-      sheet.appendRow([
-        "ts_server","prolific_pid","study_id","session_id","image_url",
-        "desc","rate_alignment","rate_control","rate_safety","confidence",
-        "cue_alignment_good","cue_alignment_poor","cue_handle_good","cue_handle_poor",
-        "cue_nav_good","cue_nav_poor","cue_env_crosswalk","cue_env_stairs","ua","raw_json"
-      ]);
-    }
+      <h2>Observable cues (check any that you clearly see)</h2>
+      <div class="checks">
+        <label class="check"><input type="checkbox" id="cue_alignment_good" /> User aligned with robot path</label>
+        <label class="check"><input type="checkbox" id="cue_alignment_poor" /> Misaligned / drifting</label>
+        <label class="check"><input type="checkbox" id="cue_handle_good" /> Proper handle hold / light tension</label>
+        <label class="check"><input type="checkbox" id="cue_handle_poor" /> Handle slack / dropped / tangled</label>
+        <label class="check"><input type="checkbox" id="cue_nav_good" /> Smooth navigation around obstacle(s)</label>
+        <label class="check"><input type="checkbox" id="cue_nav_poor" /> Hesitation / near-collision / stop</label>
+        <label class="check"><input type="checkbox" id="cue_env_crosswalk" /> Crosswalk or crossing</label>
+        <label class="check"><input type="checkbox" id="cue_env_stairs" /> Stairs or elevation change</label>
+      </div>
 
-    sheet.appendRow([
-      new Date().toISOString(),
-      data.prolific_pid || "",
-      data.study_id || "",
-      data.session_id || "",
-      data.image_url || "",
-      data.desc || "",
-      data.rate_alignment || "",
-      data.rate_control || "",
-      data.rate_safety || "",
-      data.confidence || "",
-      data.cues && data.cues.alignment_good ? 1 : 0,
-      data.cues && data.cues.alignment_poor ? 1 : 0,
-      data.cues && data.cues.handle_good ? 1 : 0,
-      data.cues && data.cues.handle_poor ? 1 : 0,
-      data.cues && data.cues.nav_good ? 1 : 0,
-      data.cues && data.cues.nav_poor ? 1 : 0,
-      data.cues && data.cues.env_crosswalk ? 1 : 0,
-      data.cues && data.cues.env_stairs ? 1 : 0,
-      data.ua || "",
-      JSON.stringify(data)
-    ]);
+      <h2>Quick ratings (based on what you can see)</h2>
+      <div class="grid">
+        <div class="scale">
+          <label for="rate_alignment"><strong>Alignment with robot</strong></label>
+          <select id="rate_alignment" required>
+            <option value="">Choose…</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option value="na">na</option>
+          </select><div></div>
+        </div>
+        <div class="scale">
+          <label for="rate_control"><strong>Handle/follow control</strong></label>
+          <select id="rate_control" required>
+            <option value="">Choose…</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option value="na">na</option>
+          </select><div></div>
+        </div>
+        <div class="scale">
+          <label for="rate_safety"><strong>Apparent safety</strong></label>
+          <select id="rate_safety" required>
+            <option value="">Choose…</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option value="na">na</option>
+          </select><div></div>
+        </div>
+      </div>
 
-    return ContentService.createTextOutput(JSON.stringify({ok:true}))
-                         .setMimeType(ContentService.MimeType.JSON);
-  } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ok:false,error:String(err)}))
-                         .setMimeType(ContentService.MimeType.JSON);
-  }
+      <h2>Confidence</h2>
+      <div class="grid">
+        <div class="scale">
+          <label for="confidence"><strong>How confident are you in your judgment?</strong></label>
+          <input type="range" id="confidence" min="0" max="100" value="70" />
+          <output id="confOut">70%</output>
+        </div>
+        <div class="bar" aria-hidden="true"></div>
+      </div>
+
+      <label class="label"><input type="checkbox" id="attn" required /> Attention check: I read the instructions.</label>
+
+      <div class="actions">
+        <button type="submit">Submit</button>
+      </div>
+      <p class="muted" id="statusMsg"></p>
+    </form>
+  </div>
+</div>
+
+<script>
+// ---- Query params (Prolific appends PROLIFIC_PID, STUDY_ID, SESSION_ID) ----
+function qp(name){ const m=new RegExp("[?&]"+name+"=([^&#]*)").exec(location.search); return m?decodeURIComponent(m[1].replace(/\+/g," ")):""; }
+const PROLIFIC_PID = qp("PROLIFIC_PID") || "";
+const STUDY_ID     = qp("STUDY_ID")     || "";
+const SESSION_ID   = qp("SESSION_ID")   || "";
+const imageUrl     = qp("image_url")    || ""; // YOU pass this in the URL
+
+// ---- Render image ----
+const imageBox = document.getElementById("imageBox");
+const imgEcho  = document.getElementById("imgEcho");
+if (!imageUrl) {
+  imageBox.innerHTML = '<p class="muted">No image_url provided. Add ?image_url=FULL_HTTPS_URL to the link.</p>';
+} else {
+  const img = document.createElement("img");
+  img.src = imageUrl.trim();
+  img.alt = "Scene of a person using a robotic guide dog";
+  img.referrerPolicy = "no-referrer";
+  img.onerror = ()=> imageBox.innerHTML = '<p class="error">Image failed to load. Ensure HTTPS (raw.githubusercontent.com for GitHub images).</p>';
+  imageBox.appendChild(img);
+  imgEcho.innerHTML = 'Image URL: <code>'+imageUrl.replace(/&/g,"&amp;").replace(/</g,"&lt;")+'</code>';
 }
+
+// ---- UI helpers ----
+const desc = document.getElementById("desc");
+const charCount = document.getElementById("charCount");
+desc.addEventListener("input", ()=>{ charCount.textContent = desc.value.length; });
+const conf = document.getElementById("confidence");
+const confOut = document.getElementById("confOut");
+conf.addEventListener("input", ()=>{ confOut.textContent = conf.value + "%"; });
+
+// ---- Validation ----
+function countSentences(t){ return (t.trim().match(/[.!?]+/g) || []).length; }
+
+// ---- Submit handler: POST to your endpoint, then redirect to Prolific ----
+document.getElementById("taskForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const status = document.getElementById("statusMsg");
+
+  if (countSentences(desc.value) < 2) { status.textContent = "Please write at least 2 sentences."; return; }
+  if (!document.getElementById("rate_alignment").value
+   || !document.getElementById("rate_control").value
+   || !document.getElementById("rate_safety").value) { status.textContent = "Please complete all three ratings."; return; }
+  if (!document.getElementById("attn").checked) { status.textContent = "Please confirm the attention check."; return; }
+
+  const payload = {
+    prolific_pid: PROLIFIC_PID,
+    study_id: STUDY_ID,
+    session_id: SESSION_ID,
+    image_url: imageUrl,
+    desc: desc.value.trim(),
+    rate_alignment: document.getElementById("rate_alignment").value,
+    rate_control: document.getElementById("rate_control").value,
+    rate_safety: document.getElementById("rate_safety").value,
+    confidence: document.getElementById("confidence").value,
+    cues: {
+      alignment_good: document.getElementById("cue_alignment_good").checked ? 1 : 0,
+      alignment_poor: document.getElementById("cue_alignment_poor").checked ? 1 : 0,
+      handle_good: document.getElementById("cue_handle_good").checked ? 1 : 0,
+      handle_poor: document.getElementById("cue_handle_poor").checked ? 1 : 0,
+      nav_good: document.getElementById("cue_nav_good").checked ? 1 : 0,
+      nav_poor: document.getElementById("cue_nav_poor").checked ? 1 : 0,
+      env_crosswalk: document.getElementById("cue_env_crosswalk").checked ? 1 : 0,
+      env_stairs: document.getElementById("cue_env_stairs").checked ? 1 : 0
+    },
+    ts: new Date().toISOString(),
+    ua: navigator.userAgent
+  };
+
+  status.textContent = "Saving…";
+  try {
+    const resp = await fetch("https://YOUR_APPS_SCRIPT_DEPLOY_URL", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) throw new Error("Endpoint error: " + resp.status);
+    // Redirect to Prolific completion URL
+    window.location.href = "https://app.prolific.com/submissions/complete?cc=YOUR_COMPLETION_CODE";
+  } catch (err) {
+    status.textContent = "Could not save your response. Please try again. (" + err.message + ")";
+  }
+});
+</script>
+</body>
+</html>
