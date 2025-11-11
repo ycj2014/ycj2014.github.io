@@ -32,6 +32,8 @@
   .progressline { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:6px 0 12px; color:var(--muted); }
   .progressbar { flex:1; height:8px; background:#0b0f16; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
   .progressfill { height:100%; width:0%; background:linear-gradient(90deg, var(--bad), var(--good)); }
+  .tips { background:#0b0f16; border:1px dashed var(--line); border-radius:12px; padding:12px; }
+  .example { background:#071019; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:.95rem; }
   .tip { font-size:.9rem; color:var(--muted); }
 </style>
 </head>
@@ -39,7 +41,25 @@
 <div class="wrap">
   <div class="card">
     <h1>Describe Scenes with a Robotic Guide Dog <span class="pill">Finish all items</span></h1>
-    <p class="muted">Be objective and specific. Focus on interaction/handling, alignment, obstacles/crossings, and apparent safety.</p>
+
+    <!-- Task Description (restored) -->
+    <h2>Task Description</h2>
+    <div class="tips">
+      <p><strong>Goal:</strong> For each image, write an objective 2–3 sentence description that helps assess how well the person is using and controlling the robotic guide dog.</p>
+      <p><strong>Focus on:</strong></p>
+      <ul>
+        <li><em>What</em> the person and robot are doing (walking, turning, stopping).</li>
+        <li>Handle/follow quality (steady, light tension, slack, misaligned).</li>
+        <li>Environment (sidewalk, crosswalk, stairs, obstacles, crowds).</li>
+        <li>Signs of good vs. poor control (smooth sync vs. hesitation/near-collision/blocked path).</li>
+      </ul>
+      <p><strong>Do not include:</strong> identity guesses (age, name), emotions unless obvious, or medical assumptions.</p>
+      <h3>Example (good):</h3>
+      <div class="example">
+        “User is stationary near the left wall, with only their feet visible at the frame edge, indicating no further movement toward the door. The robot remains fixed in position facing the door, confirming task completion and ongoing environmental monitoring. The door is clearly visible in the background with an unobstructed path; no hazards are present. The user’s sustained stationary position relative to previous frames confirms the goal of reaching the door has been safely achieved.”
+      </div>
+      <p class="muted">You must complete all images to finish the study. Progress is shown below and your place is saved if you refresh.</p>
+    </div>
 
     <div class="progressline">
       <div id="progressText">Loading tasks…</div>
@@ -115,7 +135,7 @@
 
 <script>
 // ---------- Config ----------
-const ENDPOINT = "REPLACE_WITH_YOUR_APPS_SCRIPT_EXEC_URL"; // e.g. https://script.google.com/macros/s/AKfycb.../exec
+const ENDPOINT = "REPLACE_WITH_YOUR_APPS_SCRIPT_EXEC_URL";
 const COMPLETION_URL = "https://app.prolific.com/submissions/complete?cc=YOUR_COMPLETION_CODE";
 
 // ---------- Helpers ----------
@@ -132,15 +152,15 @@ const SESSION_ID   = qp("SESSION_ID")   || "";
 const PROG_KEY = `rgd_progress_${PROLIFIC_PID || "anon"}_${STUDY_ID || "nostudy"}`;
 
 // UI refs
-const imageBox   = document.getElementById("imageBox");
-const imgEcho    = document.getElementById("imgEcho");
-const desc       = document.getElementById("desc");
-const charCount  = document.getElementById("charCount");
-const statusMsg  = document.getElementById("statusMsg");
-const errorMsg   = document.getElementById("errorMsg");
-const nextBtn    = document.getElementById("nextBtn");
-const conf       = document.getElementById("confidence");
-const confOut    = document.getElementById("confOut");
+const imageBox     = document.getElementById("imageBox");
+const imgEcho      = document.getElementById("imgEcho");
+const desc         = document.getElementById("desc");
+const charCount    = document.getElementById("charCount");
+const statusMsg    = document.getElementById("statusMsg");
+const errorMsg     = document.getElementById("errorMsg");
+const nextBtn      = document.getElementById("nextBtn");
+const conf         = document.getElementById("confidence");
+const confOut      = document.getElementById("confOut");
 const progressText = document.getElementById("progressText");
 const progressFill = document.getElementById("progressFill");
 
@@ -154,12 +174,11 @@ let idx = 0;   // current index
 let total = 0;
 
 async function loadCSV() {
-  // cache-busting to avoid GitHub Pages caching while you iterate
   const resp = await fetch("input.csv?ts=" + Date.now(), { cache: "no-store" });
   if (!resp.ok) throw new Error("input.csv not found");
   const text = await resp.text();
 
-  // Minimal CSV parse (first column named image_url). Assumes no commas inside URLs.
+  // Minimal CSV parse (first column named image_url). Assumes no commas in URLs.
   const lines = text.trim().split(/\r?\n/);
   if (lines.length < 2) throw new Error("input.csv has no data rows");
   const header = lines[0].split(",").map(h => h.trim().toLowerCase());
@@ -180,7 +199,7 @@ function loadProgress(){ try { return parseInt(localStorage.getItem(PROG_KEY) ||
 
 // ---------- Render one item ----------
 function updateProgressUI() {
-  progressText.textContent = `Item ${Math.min(idx + 1, total)} of ${total}`;
+  progressText.textContent = total ? `Item ${Math.min(idx + 1, total)} of ${total}` : "Loading tasks…";
   const pct = total ? Math.round((idx / total) * 100) : 0;
   progressFill.style.width = pct + "%";
 }
@@ -191,7 +210,6 @@ function renderCurrent() {
   updateProgressUI();
 
   if (idx >= total) {
-    // Finished all
     imageBox.innerHTML = '<h2>✅ All items completed!</h2><p class="muted">Click the button below to finish the study.</p>';
     imgEcho.innerHTML = "";
     nextBtn.textContent = "Finish & Return to Prolific";
@@ -206,7 +224,7 @@ function renderCurrent() {
   img.alt = `Scene ${idx+1}`;
   img.referrerPolicy = "no-referrer";
   img.onload = () => { imageBox.innerHTML = ""; imageBox.appendChild(img); };
-  img.onerror = () => { imageBox.innerHTML = '<p class="error">Image failed to load. Check HTTPS or URL path.</p>'; };
+  img.onerror = () => { imageBox.innerHTML = '<p class="error">Image failed to load. Use HTTPS / check path.</p>'; };
   imgEcho.innerHTML = 'Image URL: <code>' + esc(url) + '</code>';
 
   // Reset form fields between items
@@ -222,14 +240,12 @@ function renderCurrent() {
 
 // ---------- Submit one item ----------
 async function submitCurrent() {
-  // Validate
   if (countSentences(desc.value) < 2) { errorMsg.textContent = "Write at least 2 sentences."; return; }
   if (!document.getElementById("rate_alignment").value
    || !document.getElementById("rate_control").value
    || !document.getElementById("rate_safety").value) { errorMsg.textContent = "Complete all three ratings."; return; }
   if (!document.getElementById("attn").checked) { errorMsg.textContent = "Confirm attention check."; return; }
 
-  // Build payload
   const payload = {
     prolific_pid: PROLIFIC_PID,
     study_id: STUDY_ID,
@@ -256,10 +272,10 @@ async function submitCurrent() {
     ua: navigator.userAgent
   };
 
-  // POST as x-www-form-urlencoded to avoid CORS preflight
   statusMsg.textContent = "Saving…";
   errorMsg.textContent = "";
   try {
+    // URL-encoded to avoid CORS preflight
     const body = new URLSearchParams({ data: JSON.stringify(payload) }).toString();
     const resp = await fetch(ENDPOINT, {
       method: "POST",
@@ -268,7 +284,6 @@ async function submitCurrent() {
     });
     if (!resp.ok) throw new Error("Endpoint error: " + resp.status);
 
-    // Advance
     idx += 1;
     saveProgress(idx);
     renderCurrent();
