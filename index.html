@@ -1,0 +1,55 @@
+// ===== Apps Script (Google Sheets collector) =====
+// 1) Create a Google Sheet and copy its ID from the URL.
+// 2) Paste the Sheet ID below.
+// 3) Deploy as Web App (execute as Me, accessible to Anyone).
+
+const SHEET_ID = "PASTE_YOUR_SHEET_ID_HERE";
+const SHEET_NAME = "responses"; // Will be created if missing
+
+function doPost(e) {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    const sheet = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+
+    const data = JSON.parse(e.postData.contents);
+
+    // Create header row if empty
+    if (sheet.getLastRow() === 0) {
+      sheet.appendRow([
+        "ts_server","prolific_pid","study_id","session_id","image_url",
+        "desc","rate_alignment","rate_control","rate_safety","confidence",
+        "cue_alignment_good","cue_alignment_poor","cue_handle_good","cue_handle_poor",
+        "cue_nav_good","cue_nav_poor","cue_env_crosswalk","cue_env_stairs","ua","raw_json"
+      ]);
+    }
+
+    sheet.appendRow([
+      new Date().toISOString(),
+      data.prolific_pid || "",
+      data.study_id || "",
+      data.session_id || "",
+      data.image_url || "",
+      data.desc || "",
+      data.rate_alignment || "",
+      data.rate_control || "",
+      data.rate_safety || "",
+      data.confidence || "",
+      data.cues && data.cues.alignment_good ? 1 : 0,
+      data.cues && data.cues.alignment_poor ? 1 : 0,
+      data.cues && data.cues.handle_good ? 1 : 0,
+      data.cues && data.cues.handle_poor ? 1 : 0,
+      data.cues && data.cues.nav_good ? 1 : 0,
+      data.cues && data.cues.nav_poor ? 1 : 0,
+      data.cues && data.cues.env_crosswalk ? 1 : 0,
+      data.cues && data.cues.env_stairs ? 1 : 0,
+      data.ua || "",
+      JSON.stringify(data)
+    ]);
+
+    return ContentService.createTextOutput(JSON.stringify({ok:true}))
+                         .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({ok:false,error:String(err)}))
+                         .setMimeType(ContentService.MimeType.JSON);
+  }
+}
