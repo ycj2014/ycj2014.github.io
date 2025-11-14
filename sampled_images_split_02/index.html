@@ -83,10 +83,12 @@
       <p class="context-label"><strong>Previous frames (for context only)</strong></p>
       <div class="context-frames">
         <div class="context-frame" id="contextFrame1" style="display:none;">
-          <div class="imgbox"><span class="tip">Frame -2</span></div>
+          <p class="context-label" style="margin-bottom:6px;">Frame -2</p>
+          <div class="imgbox"><span class="tip">Loading…</span></div>
         </div>
         <div class="context-frame" id="contextFrame2" style="display:none;">
-          <div class="imgbox"><span class="tip">Frame -1</span></div>
+          <p class="context-label" style="margin-bottom:6px;">Frame -1</p>
+          <div class="imgbox"><span class="tip">Loading…</span></div>
         </div>
       </div>
     </div>
@@ -94,7 +96,6 @@
     <!-- Current frame to describe -->
     <div class="current-frame-label">📝 Current Frame — Describe this image below</div>
     <div class="imgbox" id="imageBox"><span class="tip">Loading image…</span></div>
-    <p class="muted" id="imgEcho"></p>
 
     <form id="taskForm">
       <label for="desc" class="label">Your objective description <span class="pill">2–3 sentences</span></label>
@@ -179,7 +180,6 @@ const PROG_KEY = `rgd_progress_${PROLIFIC_PID || "anon"}_${STUDY_ID || "nostudy"
 
 // UI refs
 const imageBox     = document.getElementById("imageBox");
-const imgEcho      = document.getElementById("imgEcho");
 const desc         = document.getElementById("desc");
 const charCount    = document.getElementById("charCount");
 const statusMsg    = document.getElementById("statusMsg");
@@ -230,6 +230,34 @@ function updateProgressUI() {
   progressFill.style.width = pct + "%";
 }
 
+// Helper function to construct previous frame URL from current URL
+function getPreviousFrameUrl(url, frameOffset) {
+  // Extract the filename from the URL
+  // Example: https://raw.githubusercontent.com/.../000512.jpg -> 000512.jpg
+  const parts = url.split('/');
+  const filename = parts[parts.length - 1];
+  
+  // Extract frame number and extension
+  // Example: 000512.jpg -> frameNum=512, ext=jpg
+  const match = filename.match(/^(\d+)\.(\w+)$/);
+  if (!match) return null; // Not a valid frame filename
+  
+  const frameNum = parseInt(match[1], 10);
+  const ext = match[2];
+  const paddingLength = match[1].length;
+  
+  // Calculate previous frame number
+  const prevFrameNum = frameNum - frameOffset;
+  if (prevFrameNum < 0) return null;
+  
+  // Reconstruct filename with padded frame number
+  const prevFrameName = String(prevFrameNum).padStart(paddingLength, '0') + '.' + ext;
+  
+  // Replace the filename in the URL
+  parts[parts.length - 1] = prevFrameName;
+  return parts.join('/');
+}
+
 function renderCurrent() {
   errorMsg.textContent = "";
   statusMsg.textContent = "";
@@ -237,14 +265,15 @@ function renderCurrent() {
 
   if (idx >= total) {
     imageBox.innerHTML = '<h2>✅ All items completed!</h2><p class="muted">Click the button below to finish the study.</p>';
-    imgEcho.innerHTML = "";
     document.getElementById("contextSection").style.display = "none";
     nextBtn.textContent = "Finish & Return to Prolific";
     nextBtn.onclick = () => { window.location.href = COMPLETION_URL; };
     return;
   }
 
-  // Load previous frames for context
+  const url = rows[idx];
+  
+  // Load previous frames for context (based on filename)
   const contextSection = document.getElementById("contextSection");
   const contextFrame1 = document.getElementById("contextFrame1");
   const contextFrame2 = document.getElementById("contextFrame2");
@@ -252,16 +281,16 @@ function renderCurrent() {
   let hasContext = false;
   
   // Frame -2 (two frames back)
-  if (idx >= 2) {
-    const prevUrl2 = rows[idx - 2];
+  const prevUrl2 = getPreviousFrameUrl(url, 2);
+  if (prevUrl2) {
     const prevBox2 = contextFrame1.querySelector(".imgbox");
     prevBox2.innerHTML = '<span class="tip">Loading…</span>';
     const prevImg2 = document.createElement("img");
     prevImg2.src = prevUrl2;
-    prevImg2.alt = `Frame ${idx-1}`;
+    prevImg2.alt = `Frame -2`;
     prevImg2.referrerPolicy = "no-referrer";
     prevImg2.onload = () => { prevBox2.innerHTML = ""; prevBox2.appendChild(prevImg2); };
-    prevImg2.onerror = () => { prevBox2.innerHTML = '<span class="tip">—</span>'; };
+    prevImg2.onerror = () => { prevBox2.innerHTML = '<span class="tip">Not available</span>'; };
     contextFrame1.style.display = "block";
     hasContext = true;
   } else {
@@ -269,16 +298,16 @@ function renderCurrent() {
   }
   
   // Frame -1 (one frame back)
-  if (idx >= 1) {
-    const prevUrl1 = rows[idx - 1];
+  const prevUrl1 = getPreviousFrameUrl(url, 1);
+  if (prevUrl1) {
     const prevBox1 = contextFrame2.querySelector(".imgbox");
     prevBox1.innerHTML = '<span class="tip">Loading…</span>';
     const prevImg1 = document.createElement("img");
     prevImg1.src = prevUrl1;
-    prevImg1.alt = `Frame ${idx}`;
+    prevImg1.alt = `Frame -1`;
     prevImg1.referrerPolicy = "no-referrer";
     prevImg1.onload = () => { prevBox1.innerHTML = ""; prevBox1.appendChild(prevImg1); };
-    prevImg1.onerror = () => { prevBox1.innerHTML = '<span class="tip">—</span>'; };
+    prevImg1.onerror = () => { prevBox1.innerHTML = '<span class="tip">Not available</span>'; };
     contextFrame2.style.display = "block";
     hasContext = true;
   } else {
@@ -288,7 +317,6 @@ function renderCurrent() {
   contextSection.style.display = hasContext ? "block" : "none";
 
   // Load current frame
-  const url = rows[idx];
   imageBox.innerHTML = '<span class="tip">Loading image…</span>';
   const img = document.createElement("img");
   img.src = url;
@@ -296,7 +324,6 @@ function renderCurrent() {
   img.referrerPolicy = "no-referrer";
   img.onload = () => { imageBox.innerHTML = ""; imageBox.appendChild(img); };
   img.onerror = () => { imageBox.innerHTML = '<p class="error">Image failed to load. Use HTTPS / check path.</p>'; };
-  imgEcho.innerHTML = 'Image URL: <code>' + esc(url) + '</code>';
 
   // Reset form fields between items
   desc.value = "";
