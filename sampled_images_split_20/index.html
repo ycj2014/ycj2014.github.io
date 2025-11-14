@@ -35,6 +35,13 @@
   .tips { background:#0b0f16; border:1px dashed var(--line); border-radius:12px; padding:12px; }
   .example { background:#071019; border:1px solid var(--line); border-radius:10px; padding:10px; font-size:.95rem; }
   .tip { font-size:.9rem; color:var(--muted); }
+  .context-frames { display:flex; gap:12px; margin-bottom:20px; }
+  .context-frame { flex:1; opacity:0.5; }
+  .context-frame .imgbox { min-height:80px; background:#07090c; }
+  .context-frame img { opacity:0.7; }
+  .context-label { font-size:.85rem; color:var(--muted); margin-bottom:6px; text-align:center; }
+  .current-frame-label { font-size:1.05rem; color:var(--accent); font-weight:700; margin-bottom:10px; text-align:center; background:#0b0f16; border:2px solid var(--accent); border-radius:10px; padding:8px; }
+  @media (max-width:640px){ .context-frames{flex-direction:column;} }
 </style>
 </head>
 <body>
@@ -69,7 +76,23 @@
       <div class="progressbar"><div id="progressFill" class="progressfill"></div></div>
     </div>
 
-    <h2>Image</h2>
+    <h2>Images</h2>
+    
+    <!-- Previous frames for context -->
+    <div id="contextSection" style="display:none;">
+      <p class="context-label"><strong>Previous frames (for context only)</strong></p>
+      <div class="context-frames">
+        <div class="context-frame" id="contextFrame1" style="display:none;">
+          <div class="imgbox"><span class="tip">Frame -2</span></div>
+        </div>
+        <div class="context-frame" id="contextFrame2" style="display:none;">
+          <div class="imgbox"><span class="tip">Frame -1</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current frame to describe -->
+    <div class="current-frame-label">📝 Current Frame — Describe this image below</div>
     <div class="imgbox" id="imageBox"><span class="tip">Loading image…</span></div>
     <p class="muted" id="imgEcho"></p>
 
@@ -215,11 +238,56 @@ function renderCurrent() {
   if (idx >= total) {
     imageBox.innerHTML = '<h2>✅ All items completed!</h2><p class="muted">Click the button below to finish the study.</p>';
     imgEcho.innerHTML = "";
+    document.getElementById("contextSection").style.display = "none";
     nextBtn.textContent = "Finish & Return to Prolific";
     nextBtn.onclick = () => { window.location.href = COMPLETION_URL; };
     return;
   }
 
+  // Load previous frames for context
+  const contextSection = document.getElementById("contextSection");
+  const contextFrame1 = document.getElementById("contextFrame1");
+  const contextFrame2 = document.getElementById("contextFrame2");
+  
+  let hasContext = false;
+  
+  // Frame -2 (two frames back)
+  if (idx >= 2) {
+    const prevUrl2 = rows[idx - 2];
+    const prevBox2 = contextFrame1.querySelector(".imgbox");
+    prevBox2.innerHTML = '<span class="tip">Loading…</span>';
+    const prevImg2 = document.createElement("img");
+    prevImg2.src = prevUrl2;
+    prevImg2.alt = `Frame ${idx-1}`;
+    prevImg2.referrerPolicy = "no-referrer";
+    prevImg2.onload = () => { prevBox2.innerHTML = ""; prevBox2.appendChild(prevImg2); };
+    prevImg2.onerror = () => { prevBox2.innerHTML = '<span class="tip">—</span>'; };
+    contextFrame1.style.display = "block";
+    hasContext = true;
+  } else {
+    contextFrame1.style.display = "none";
+  }
+  
+  // Frame -1 (one frame back)
+  if (idx >= 1) {
+    const prevUrl1 = rows[idx - 1];
+    const prevBox1 = contextFrame2.querySelector(".imgbox");
+    prevBox1.innerHTML = '<span class="tip">Loading…</span>';
+    const prevImg1 = document.createElement("img");
+    prevImg1.src = prevUrl1;
+    prevImg1.alt = `Frame ${idx}`;
+    prevImg1.referrerPolicy = "no-referrer";
+    prevImg1.onload = () => { prevBox1.innerHTML = ""; prevBox1.appendChild(prevImg1); };
+    prevImg1.onerror = () => { prevBox1.innerHTML = '<span class="tip">—</span>'; };
+    contextFrame2.style.display = "block";
+    hasContext = true;
+  } else {
+    contextFrame2.style.display = "none";
+  }
+  
+  contextSection.style.display = hasContext ? "block" : "none";
+
+  // Load current frame
   const url = rows[idx];
   imageBox.innerHTML = '<span class="tip">Loading image…</span>';
   const img = document.createElement("img");
