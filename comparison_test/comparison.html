@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Description Evaluation — Robotic Guide Dog</title>
+<style>
+  :root { --bg:#0b0c10; --card:#11141a; --ink:#e8f0fe; --muted:#a8b3c7; --line:#232834; --accent:#7aa2ff; --good:#29c17e; --bad:#ff6b6b; --optionA:#ff9d42; --optionB:#42d4ff; }
+  html,body { background:var(--bg); color:var(--ink); font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; margin:0; }
+  .wrap { max-width:1100px; margin:24px auto; padding:0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; box-shadow:0 8px 30px rgba(0,0,0,.25); }
+  h1 { font-size:1.35rem; margin:0 0 10px; }
+  h2 { font-size:1.05rem; margin:20px 0 8px; color:var(--muted); }
+  p, li, label { color:var(--ink); }
+  .muted { color:var(--muted); }
+  .pill { display:inline-block; padding:.2rem .55rem; border:1px solid var(--line); border-radius:999px; font-size:.85rem; color:var(--muted); }
+  .tips { background:#0b0f16; border:1px dashed var(--line); border-radius:12px; padding:12px; margin-bottom:16px; }
+  
+  /* Progress bar */
+  .progressline { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:6px 0 16px; color:var(--muted); }
+  .progressbar { flex:1; height:8px; background:#0b0f16; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+  .progressfill { height:100%; width:0%; background:linear-gradient(90deg, var(--bad), var(--good)); }
+  
+  /* Images section */
+  .images-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px; }
+  .image-container { text-align:center; }
+  .image-label { font-size:.9rem; color:var(--muted); margin-bottom:8px; font-weight:600; }
+  .imgbox { background:#0a0d12; border:1px solid var(--line); border-radius:12px; padding:12px; min-height:200px; display:flex; align-items:center; justify-content:center; }
+  .imgbox img { width:100%; height:auto; display:block; border-radius:8px; }
+  .current-image-label { font-size:1rem; color:var(--accent); font-weight:700; }
+  
+  /* Descriptions section */
+  .descriptions-section { margin-bottom:24px; }
+  .description-pair { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+  .description-box { background:#0b0f16; border:2px solid var(--line); border-radius:12px; padding:16px; position:relative; }
+  .description-box.option-a { border-color:var(--optionA); }
+  .description-box.option-b { border-color:var(--optionB); }
+  .description-header { font-weight:700; font-size:1rem; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .description-header.option-a { color:var(--optionA); }
+  .description-header.option-b { color:var(--optionB); }
+  .description-badge { display:inline-block; background:var(--optionA); color:#000; padding:2px 8px; border-radius:6px; font-size:.85rem; font-weight:700; }
+  .description-badge.b { background:var(--optionB); }
+  .description-text { color:var(--ink); line-height:1.6; font-size:.95rem; }
+  
+  /* Choice section */
+  .choice-section { background:#0b0f16; border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:20px; }
+  .choice-options { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:12px; }
+  .choice-btn { background:#0b0f16; border:2px solid var(--line); border-radius:10px; padding:16px; cursor:pointer; transition:all 0.2s; text-align:center; font-weight:600; }
+  .choice-btn:hover { border-color:var(--accent); transform:translateY(-2px); }
+  .choice-btn.selected { border-color:var(--accent); background:rgba(122, 162, 255, 0.1); }
+  .choice-btn input[type="radio"] { display:none; }
+  .choice-btn.option-a:hover { border-color:var(--optionA); }
+  .choice-btn.option-a.selected { border-color:var(--optionA); background:rgba(255, 157, 66, 0.1); }
+  .choice-btn.option-b:hover { border-color:var(--optionB); }
+  .choice-btn.option-b.selected { border-color:var(--optionB); background:rgba(66, 212, 255, 0.1); }
+  .choice-btn.neither:hover { border-color:var(--bad); }
+  .choice-btn.neither.selected { border-color:var(--bad); background:rgba(255, 107, 107, 0.1); }
+  
+  /* Confidence slider */
+  .confidence-section { margin-top:16px; }
+  .slider-container { display:grid; grid-template-columns:200px 1fr 60px; gap:10px; align-items:center; margin-top:8px; }
+  input[type="range"] { width:100%; }
+  
+  /* Buttons */
+  .actions { display:flex; gap:12px; margin-top:20px; }
+  button { background:var(--accent); color:#051225; border:0; border-radius:10px; padding:12px 20px; font-weight:700; cursor:pointer; font-size:1rem; }
+  button:disabled { opacity:0.5; cursor:not-allowed; }
+  .error { color:var(--bad); margin-top:10px; font-weight:600; }
+  .tip { font-size:.9rem; color:var(--muted); }
+  
+  @media (max-width:768px){ 
+    .images-grid, .description-pair, .choice-options { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Evaluate Scene Descriptions <span class="pill">Compare accuracy</span></h1>
+    
+    <!-- Task Description -->
+    <div class="tips">
+      <p><strong>Task:</strong> You will see two images (previous frame and current frame) along with two different descriptions of the current frame.</p>
+      <p><strong>Your goal:</strong> Determine which description more accurately describes the current scene, or select "Neither" if both are inaccurate.</p>
+      <p class="muted">Consider the accuracy of details about the user's position, robot's position, environment, and actions described.</p>
+    </div>
+
+    <div class="progressline">
+      <div id="progressText">Loading tasks…</div>
+      <div class="progressbar"><div id="progressFill" class="progressfill"></div></div>
+    </div>
+
+    <!-- Images -->
+    <h2>Images</h2>
+    <div class="images-grid">
+      <div class="image-container">
+        <div class="image-label">Previous Frame (for context)</div>
+        <div class="imgbox" id="prevImageBox"><span class="tip">Loading…</span></div>
+      </div>
+      <div class="image-container">
+        <div class="image-label current-image-label">📝 Current Frame (evaluate descriptions below)</div>
+        <div class="imgbox" id="currentImageBox"><span class="tip">Loading…</span></div>
+      </div>
+    </div>
+
+    <!-- Descriptions -->
+    <h2>Descriptions to Compare</h2>
+    <div class="descriptions-section">
+      <div class="description-pair">
+        <div class="description-box option-a">
+          <div class="description-header option-a">
+            <span class="description-badge">A</span>
+            <span>Description A</span>
+          </div>
+          <div class="description-text" id="descriptionA">Loading...</div>
+        </div>
+        <div class="description-box option-b">
+          <div class="description-header option-b">
+            <span class="description-badge b">B</span>
+            <span>Description B</span>
+          </div>
+          <div class="description-text" id="descriptionB">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Choice Section -->
+    <div class="choice-section">
+      <h2 style="margin-top:0;">Which description is more accurate?</h2>
+      <div class="choice-options">
+        <label class="choice-btn option-a" id="choiceA">
+          <input type="radio" name="choice" value="A" required />
+          <div style="font-size:1.5rem; margin-bottom:8px;">📋</div>
+          <div>Description A</div>
+          <div style="font-size:.85rem; color:var(--muted); margin-top:4px;">is more accurate</div>
+        </label>
+        <label class="choice-btn option-b" id="choiceB">
+          <input type="radio" name="choice" value="B" required />
+          <div style="font-size:1.5rem; margin-bottom:8px;">📋</div>
+          <div>Description B</div>
+          <div style="font-size:.85rem; color:var(--muted); margin-top:4px;">is more accurate</div>
+        </label>
+        <label class="choice-btn neither" id="choiceNeither">
+          <input type="radio" name="choice" value="Neither" required />
+          <div style="font-size:1.5rem; margin-bottom:8px;">❌</div>
+          <div>Neither</div>
+          <div style="font-size:.85rem; color:var(--muted); margin-top:4px;">Both are inaccurate</div>
+        </label>
+      </div>
+
+      <!-- Confidence -->
+      <div class="confidence-section">
+        <label><strong>How confident are you in your choice?</strong></label>
+        <div class="slider-container">
+          <span>Not confident</span>
+          <input type="range" id="confidence" min="0" max="100" value="70" />
+          <output id="confOut">70%</output>
+        </div>
+      </div>
+    </div>
+
+    <!-- Optional Comments -->
+    <div style="margin-bottom:20px;">
+      <label for="comments" style="font-weight:600; display:block; margin-bottom:8px;">
+        Optional: Why did you make this choice?
+      </label>
+      <textarea id="comments" style="width:100%; min-height:80px; resize:vertical; background:#0b0f16; color:#e8f0fe; border:1px solid var(--line); border-radius:10px; padding:12px;" placeholder="Optional explanation of your reasoning..."></textarea>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button id="nextBtn" type="button" disabled>Save & Next</button>
+    </div>
+    <p class="muted" id="statusMsg"></p>
+    <p class="error" id="errorMsg"></p>
+  </div>
+</div>
+
+<script>
+// ---------- Config ----------
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbwHMfSgaIqzd82lobNwaH4J3Ej_TbkKMof0DzYiGd_XrofnXsFYN8VawQLl6VOF4NwXgQ/exec";
+const COMPLETION_URL = "https://app.prolific.com/submissions/complete?cc=C1OPWXA6";
+
+// ---------- Helpers ----------
+function qp(name){ const m=new RegExp("[?&]"+name+"=([^&#]*)").exec(location.search); return m?decodeURIComponent(m[1].replace(/\+/g," ")):""; }
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+
+// Prolific IDs
+const PROLIFIC_PID = qp("PROLIFIC_PID") || "";
+const STUDY_ID     = qp("STUDY_ID")     || "";
+const SESSION_ID   = qp("SESSION_ID")   || "";
+
+// Progress state
+const PROG_KEY = `rgd_comparison_${PROLIFIC_PID || "anon"}_${STUDY_ID || "nostudy"}`;
+
+// UI refs
+const prevImageBox = document.getElementById("prevImageBox");
+const currentImageBox = document.getElementById("currentImageBox");
+const descriptionA = document.getElementById("descriptionA");
+const descriptionB = document.getElementById("descriptionB");
+const choiceA = document.getElementById("choiceA");
+const choiceB = document.getElementById("choiceB");
+const choiceNeither = document.getElementById("choiceNeither");
+const confidence = document.getElementById("confidence");
+const confOut = document.getElementById("confOut");
+const comments = document.getElementById("comments");
+const nextBtn = document.getElementById("nextBtn");
+const statusMsg = document.getElementById("statusMsg");
+const errorMsg = document.getElementById("errorMsg");
+const progressText = document.getElementById("progressText");
+const progressFill = document.getElementById("progressFill");
+
+// Confidence slider update
+confidence.addEventListener("input", ()=>{ confOut.textContent = confidence.value + "%"; });
+
+// Enable button when choice is made
+document.querySelectorAll('input[name="choice"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    nextBtn.disabled = false;
+    // Update visual selection
+    [choiceA, choiceB, choiceNeither].forEach(btn => btn.classList.remove('selected'));
+    if(radio.value === 'A') choiceA.classList.add('selected');
+    if(radio.value === 'B') choiceB.classList.add('selected');
+    if(radio.value === 'Neither') choiceNeither.classList.add('selected');
+  });
+});
+
+// ---------- CSV load ----------
+let rows = []; // array of { prev_image, current_image, description_a, description_b }
+let idx = 0;
+let total = 0;
+
+async function loadCSV() {
+  const resp = await fetch("comparison_input.csv?ts=" + Date.now(), { cache: "no-store" });
+  if (!resp.ok) throw new Error("comparison_input.csv not found");
+  const text = await resp.text();
+
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) throw new Error("comparison_input.csv has no data rows");
+  
+  const header = lines[0].split(",").map(h => h.trim().toLowerCase());
+  const prevCol = header.indexOf("prev_image");
+  const currentCol = header.indexOf("current_image");
+  const descACol = header.indexOf("description_a");
+  const descBCol = header.indexOf("description_b");
+  
+  if (prevCol === -1 || currentCol === -1 || descACol === -1 || descBCol === -1) {
+    throw new Error("CSV must have columns: prev_image, current_image, description_a, description_b");
+  }
+
+  rows = lines.slice(1).map(line => {
+    const parts = line.split(",");
+    return {
+      prev_image: (parts[prevCol] || "").trim(),
+      current_image: (parts[currentCol] || "").trim(),
+      description_a: (parts[descACol] || "").trim(),
+      description_b: (parts[descBCol] || "").trim()
+    };
+  }).filter(r => r.current_image && r.description_a && r.description_b);
+
+  total = rows.length;
+}
+
+// ---------- Progress persistence ----------
+function saveProgress(i){ try { localStorage.setItem(PROG_KEY, String(i)); } catch(e){} }
+function loadProgress(){ try { return parseInt(localStorage.getItem(PROG_KEY) || "0", 10); } catch(e){ return 0; } }
+
+function updateProgressUI() {
+  progressText.textContent = total ? `Item ${Math.min(idx + 1, total)} of ${total}` : "Loading tasks…";
+  const pct = total ? Math.round((idx / total) * 100) : 0;
+  progressFill.style.width = pct + "%";
+}
+
+// ---------- Render current item ----------
+function renderCurrent() {
+  errorMsg.textContent = "";
+  statusMsg.textContent = "";
+  updateProgressUI();
+
+  if (idx >= total) {
+    currentImageBox.innerHTML = '<h2>✅ All comparisons completed!</h2><p class="muted">Thank you!</p>';
+    prevImageBox.innerHTML = "";
+    descriptionA.textContent = "";
+    descriptionB.textContent = "";
+    nextBtn.textContent = "Finish & Return to Prolific";
+    nextBtn.disabled = false;
+    nextBtn.onclick = () => { window.location.href = COMPLETION_URL; };
+    return;
+  }
+
+  const item = rows[idx];
+
+  // Load previous image
+  if (item.prev_image) {
+    prevImageBox.innerHTML = '<span class="tip">Loading…</span>';
+    const prevImg = document.createElement("img");
+    prevImg.src = item.prev_image;
+    prevImg.alt = "Previous frame";
+    prevImg.referrerPolicy = "no-referrer";
+    prevImg.onload = () => { prevImageBox.innerHTML = ""; prevImageBox.appendChild(prevImg); };
+    prevImg.onerror = () => { prevImageBox.innerHTML = '<span class="tip">Not available</span>'; };
+  } else {
+    prevImageBox.innerHTML = '<span class="tip">No previous frame</span>';
+  }
+
+  // Load current image
+  currentImageBox.innerHTML = '<span class="tip">Loading…</span>';
+  const currentImg = document.createElement("img");
+  currentImg.src = item.current_image;
+  currentImg.alt = "Current frame";
+  currentImg.referrerPolicy = "no-referrer";
+  currentImg.onload = () => { currentImageBox.innerHTML = ""; currentImageBox.appendChild(currentImg); };
+  currentImg.onerror = () => { currentImageBox.innerHTML = '<p class="error">Image failed to load</p>'; };
+
+  // Load descriptions
+  descriptionA.textContent = item.description_a;
+  descriptionB.textContent = item.description_b;
+
+  // Reset form
+  document.querySelectorAll('input[name="choice"]').forEach(r => r.checked = false);
+  [choiceA, choiceB, choiceNeither].forEach(btn => btn.classList.remove('selected'));
+  confidence.value = 70;
+  confOut.textContent = "70%";
+  comments.value = "";
+  nextBtn.disabled = true;
+  nextBtn.textContent = (idx === total - 1) ? "Save & Finish" : "Save & Next";
+  nextBtn.onclick = submitCurrent;
+}
+
+// ---------- Submit ----------
+async function submitCurrent() {
+  const choice = document.querySelector('input[name="choice"]:checked');
+  if (!choice) {
+    errorMsg.textContent = "Please select which description is more accurate.";
+    return;
+  }
+
+  const item = rows[idx];
+  const payload = {
+    prolific_pid: PROLIFIC_PID,
+    study_id: STUDY_ID,
+    session_id: SESSION_ID,
+    index: idx,
+    total: total,
+    prev_image: item.prev_image,
+    current_image: item.current_image,
+    description_a: item.description_a,
+    description_b: item.description_b,
+    choice: choice.value,
+    confidence: confidence.value,
+    comments: comments.value.trim(),
+    ts: new Date().toISOString(),
+    ua: navigator.userAgent
+  };
+
+  statusMsg.textContent = "Saving…";
+  errorMsg.textContent = "";
+  try {
+    const body = new URLSearchParams({ data: JSON.stringify(payload) }).toString();
+    const resp = await fetch(ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body
+    });
+    if (!resp.ok) throw new Error("Endpoint error: " + resp.status);
+
+    idx += 1;
+    saveProgress(idx);
+    renderCurrent();
+  } catch (err) {
+    errorMsg.textContent = "Could not save. Please try again. (" + err.message + ")";
+  } finally {
+    statusMsg.textContent = "";
+  }
+}
+
+// ---------- Init ----------
+(async function init(){
+  try {
+    await loadCSV();
+    idx = Math.max(0, Math.min(loadProgress(), (rows.length - 1)));
+    renderCurrent();
+  } catch (e) {
+    currentImageBox.innerHTML = '<p class="error">Error: ' + esc(e.message) + '</p>';
+    prevImageBox.innerHTML = "";
+  }
+})();
+</script>
+</body>
+</html>
+
