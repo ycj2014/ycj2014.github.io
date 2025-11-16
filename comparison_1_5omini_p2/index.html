@@ -226,7 +226,7 @@ document.querySelectorAll('input[name="choice"]').forEach(radio => {
 });
 
 // ---------- CSV load ----------
-let rows = []; // array of { prev_image, current_image, description_a, description_b }
+let rows = []; // array of { prev_image, current_image, description_a, description_b, model_position }
 let idx = 0;
 let total = 0;
 
@@ -272,6 +272,7 @@ async function loadCSV() {
   const currentCol = header.indexOf("current_image");
   const descACol = header.indexOf("description_a");
   const descBCol = header.indexOf("description_b");
+  const modelPosCol = header.indexOf("model_position");
   
   if (prevCol === -1 || currentCol === -1 || descACol === -1 || descBCol === -1) {
     throw new Error("CSV must have columns: prev_image, current_image, description_a, description_b");
@@ -283,7 +284,8 @@ async function loadCSV() {
       prev_image: (parts[prevCol] || "").trim(),
       current_image: (parts[currentCol] || "").trim(),
       description_a: (parts[descACol] || "").trim(),
-      description_b: (parts[descBCol] || "").trim()
+      description_b: (parts[descBCol] || "").trim(),
+      model_position: modelPosCol >= 0 ? (parts[modelPosCol] || "").trim() : ""
     };
   }).filter(r => r.current_image && r.description_a && r.description_b);
 
@@ -375,6 +377,7 @@ async function submitCurrent() {
     current_image: item.current_image,
     description_a: item.description_a,
     description_b: item.description_b,
+    model_position: item.model_position,
     choice: choice.value,
     confidence: confidence.value,
     comments: comments.value.trim(),
