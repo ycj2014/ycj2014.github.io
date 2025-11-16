@@ -230,15 +230,44 @@ let rows = []; // array of { prev_image, current_image, description_a, descripti
 let idx = 0;
 let total = 0;
 
+// Helper to parse CSV line with quoted fields
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+    
+    if (char === '"' && inQuotes && nextChar === '"') {
+      // Escaped quote
+      current += '"';
+      i++; // Skip next quote
+    } else if (char === '"') {
+      // Toggle quote mode
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      // Field separator
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current); // Add last field
+  return result;
+}
+
 async function loadCSV() {
   const resp = await fetch("comparison_input.csv?ts=" + Date.now(), { cache: "no-store" });
   if (!resp.ok) throw new Error("comparison_input.csv not found");
   const text = await resp.text();
 
-  const lines = text.trim().split(/\r?\n/);
+  const lines = text.trim().split(/\r?\n/).filter(line => line.trim());
   if (lines.length < 2) throw new Error("comparison_input.csv has no data rows");
   
-  const header = lines[0].split(",").map(h => h.trim().toLowerCase());
+  const header = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
   const prevCol = header.indexOf("prev_image");
   const currentCol = header.indexOf("current_image");
   const descACol = header.indexOf("description_a");
@@ -249,7 +278,7 @@ async function loadCSV() {
   }
 
   rows = lines.slice(1).map(line => {
-    const parts = line.split(",");
+    const parts = parseCSVLine(line);
     return {
       prev_image: (parts[prevCol] || "").trim(),
       current_image: (parts[currentCol] || "").trim(),
