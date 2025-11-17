@@ -44,7 +44,7 @@
   
   /* Choice section */
   .choice-section { background:#0b0f16; border:1px solid var(--line); border-radius:12px; padding:20px; margin-bottom:20px; }
-  .choice-options { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-top:12px; }
+  .choice-options { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
   .choice-btn { background:#0b0f16; border:2px solid var(--line); border-radius:10px; padding:16px; cursor:pointer; transition:all 0.2s; text-align:center; font-weight:600; }
   .choice-btn:hover { border-color:var(--accent); transform:translateY(-2px); }
   .choice-btn.selected { border-color:var(--accent); background:rgba(122, 162, 255, 0.1); }
@@ -149,6 +149,12 @@
           <div>Neither</div>
           <div style="font-size:.85rem; color:var(--muted); margin-top:4px;">Both are inaccurate</div>
         </label>
+        <label class="choice-btn equal" id="choiceEqual">
+          <input type="radio" name="choice" value="Equal" required />
+          <div style="font-size:1.5rem; margin-bottom:8px;">⚖️</div>
+          <div>Equally good</div>
+          <div style="font-size:.85rem; color:var(--muted); margin-top:4px;">Both are equally accurate</div>
+        </label>
       </div>
 
       <!-- Confidence -->
@@ -204,6 +210,7 @@ const descriptionB = document.getElementById("descriptionB");
 const choiceA = document.getElementById("choiceA");
 const choiceB = document.getElementById("choiceB");
 const choiceNeither = document.getElementById("choiceNeither");
+const choiceEqual = document.getElementById("choiceEqual");
 const confidence = document.getElementById("confidence");
 const confOut = document.getElementById("confOut");
 const comments = document.getElementById("comments");
@@ -221,10 +228,11 @@ document.querySelectorAll('input[name="choice"]').forEach(radio => {
   radio.addEventListener('change', () => {
     nextBtn.disabled = false;
     // Update visual selection
-    [choiceA, choiceB, choiceNeither].forEach(btn => btn.classList.remove('selected'));
-    if(radio.value === 'A') choiceA.classList.add('selected');
-    if(radio.value === 'B') choiceB.classList.add('selected');
-    if(radio.value === 'Neither') choiceNeither.classList.add('selected');
+    [choiceA, choiceB, choiceNeither, choiceEqual].forEach(btn => btn.classList.remove('selected'));
+    if (radio.value === 'A') choiceA.classList.add('selected');
+    if (radio.value === 'B') choiceB.classList.add('selected');
+    if (radio.value === 'Neither') choiceNeither.classList.add('selected');
+    if (radio.value === 'Equal') choiceEqual.classList.add('selected');
   });
 });
 
