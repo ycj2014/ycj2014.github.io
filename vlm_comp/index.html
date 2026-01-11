@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Instruction Comparison</title>
+    <style>
+        :root {
+            --bg: #0b0c10;
+            --card: #11141a;
+            --ink: #e8f0fe;
+            --muted: #a8b3c7;
+            --line: #232834;
+            --accent: #7aa2ff;
+            --good: #29c17e;
+            --bad: #ff6b6b;
+            --methodA: #ff9b5e;
+            --methodB: #5eb3ff;
+            --methodC: #7dd87d;
+        }
+
+        html,
+        body {
+            background: var(--bg);
+            color: var(--ink);
+            font: 16px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+            margin: 0;
+        }
+
+        .wrap {
+            max-width: 1400px;
+            margin: 24px auto;
+            padding: 0 16px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, .25);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin: 0 0 10px;
+        }
+
+        h2 {
+            font-size: 1.15rem;
+            margin: 20px 0 12px;
+            color: var(--accent);
+        }
+
+        h3 {
+            font-size: 1.05rem;
+            margin: 16px 0 8px;
+            color: var(--muted);
+        }
+
+        p,
+        li,
+        label {
+            color: var(--ink);
+            line-height: 1.6;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .pill {
+            display: inline-block;
+            padding: .2rem .55rem;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            font-size: .85rem;
+            color: var(--muted);
+        }
+
+        /* Image sequence display */
+        .image-sequence-container {
+            background: #0a0d12;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+
+        .image-display {
+            width: 100%;
+            max-width: 800px;
+            height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+            background: #000;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .image-display img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .frame-counter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: var(--ink);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .playback-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+            margin-top: 12px;
+        }
+
+        .control-btn {
+            background: var(--accent);
+            color: #051225;
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95rem;
+        }
+
+        .control-btn:hover {
+            opacity: 0.9;
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .playback-progress {
+            flex: 1;
+            max-width: 400px;
+            height: 6px;
+            background: #0b0f16;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .playback-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--accent);
+            transition: width 0.1s linear;
+        }
+
+        /* Side-by-side comparison */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin: 24px 0;
+        }
+
+        @media (max-width:1200px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .method-box {
+            background: #0b0f16;
+            border: 2px solid var(--line);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .method-box.methodA {
+            border-color: var(--methodA);
+        }
+
+        .method-box.methodB {
+            border-color: var(--methodB);
+        }
+
+        .method-box.methodC {
+            border-color: var(--methodC);
+        }
+
+        .method-label {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .method-label.methodA {
+            background: rgba(255, 155, 94, 0.15);
+            color: var(--methodA);
+        }
+
+        .method-label.methodB {
+            background: rgba(94, 179, 255, 0.15);
+            color: var(--methodB);
+        }
+
+        .method-label.methodC {
+            background: rgba(125, 216, 125, 0.15);
+            color: var(--methodC);
+        }
+
+        .feedback-text {
+            background: #051019;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 16px;
+            min-height: 200px;
+            white-space: pre-wrap;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        /* Rating controls */
+        .rating-section {
+            background: #0b0f16;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .rating-row {
+            margin: 20px 0;
+            padding: 16px;
+            background: #051019;
+            border-radius: 10px;
+        }
+
+        .rating-question {
+            font-weight: 600;
+            margin-bottom: 12px;
+            font-size: 1.05rem;
+        }
+
+        .rating-description {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-bottom: 16px;
+        }
+
+        /* Pairwise comparison buttons */
+        .pairwise-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 800px) {
+            .pairwise-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .pairwise-btn {
+            padding: 16px 20px;
+            border: 2px solid var(--line);
+            border-radius: 10px;
+            background: #0a0d12;
+            color: var(--ink);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .pairwise-btn:hover {
+            background: #11141a;
+            border-color: var(--accent);
+        }
+
+        .pairwise-btn.selected {
+            background: var(--accent);
+            color: #051225;
+            border-color: var(--accent);
+        }
+
+        .pairwise-btn.methodA.selected {
+            background: var(--methodA);
+            border-color: var(--methodA);
+        }
+
+        .pairwise-btn.methodB.selected {
+            background: var(--methodB);
+            border-color: var(--methodB);
+        }
+
+        .pairwise-btn.methodC:hover {
+            border-color: var(--methodC);
+        }
+
+        .pairwise-btn.methodC.selected {
+            background: var(--methodC);
+            border-color: var(--methodC);
+        }
+
+        .pairwise-btn.tie.selected {
+            background: var(--good);
+            border-color: var(--good);
+        }
+
+        /* Rating Grid */
+        .rating-grid {
+            display: grid;
+            grid-template-columns: 150px 1fr 1fr 1fr;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .rating-grid-header {
+            display: contents;
+        }
+
+        .rating-grid-row {
+            display: contents;
+        }
+
+        .dimension-label {
+            font-weight: 600;
+            font-size: 1rem;
+            text-align: right;
+            padding-right: 8px;
+        }
+
+        .method-header {
+            font-weight: 700;
+            text-align: center;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+
+        .method-header.methodA {
+            background: rgba(255, 155, 94, 0.15);
+            color: var(--methodA);
+        }
+
+        .method-header.methodB {
+            background: rgba(94, 179, 255, 0.15);
+            color: var(--methodB);
+        }
+
+        .method-header.methodC {
+            background: rgba(125, 216, 125, 0.15);
+            color: var(--methodC);
+        }
+
+        .likert-container {
+            padding: 4px;
+        }
+
+        /* Likert scale */
+        .likert-scale {
+            display: flex;
+            gap: 4px;
+            justify-content: center;
+        }
+
+        .likert-option {
+            text-align: center;
+        }
+
+        .likert-option input[type="radio"] {
+            display: none;
+        }
+
+        .likert-option label {
+            display: block;
+            padding: 8px 10px;
+            border: 2px solid var(--line);
+            border-radius: 6px;
+            background: #0a0d12;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+            min-width: 32px;
+        }
+
+        .likert-option input[type="radio"]:checked+label {
+            background: var(--accent);
+            color: #051225;
+            border-color: var(--accent);
+            font-weight: 700;
+        }
+
+        .likert-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        @media (max-width: 900px) {
+            .rating-grid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .rating-grid-row {
+                display: block;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+
+            .dimension-label {
+                text-align: left;
+                font-size: 1.05rem;
+                margin-bottom: 12px;
+                padding-right: 0;
+            }
+
+            .method-header {
+                display: none;
+            }
+
+            .likert-container {
+                margin-bottom: 12px;
+            }
+
+            .likert-container::before {
+                content: attr(data-method);
+                display: block;
+                font-weight: 600;
+                margin-bottom: 6px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Progress */
+        .progressline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin: 12px 0 20px;
+            color: var(--muted);
+        }
+
+        .progressbar {
+            flex: 1;
+            height: 8px;
+            background: #0b0f16;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progressfill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--bad), var(--good));
+            transition: width 0.3s;
+        }
+
+        /* Instructions */
+        .tips {
+            background: #0b0f16;
+            border: 1px dashed var(--line);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+
+        .tips ul {
+            margin: 8px 0;
+            padding-left: 24px;
+        }
+
+        /* Actions */
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        button {
+            background: var(--accent);
+            color: #051225;
+            border: 0;
+            border-radius: 10px;
+            padding: 14px 24px;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .error {
+            color: #ff9b9b;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+
+        .success {
+            color: var(--good);
+            margin-top: 10px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <div class="card">
+            <h1>Instruction Comparison <span class="pill">Best Choice</span></h1>
+
+            <div class="tips">
+                <p><strong>Task:</strong> You will compare three different instructions for robotic assistance tasks.</p>
+                <p><strong>Your job:</strong></p>
+                <ul>
+                    <li>Watch the image sequence showing a user learning to operate a robotic assistant</li>
+                    <li>Read all three instruction outputs (Method A, Method B, and Method C)</li>
+                    <li>Choose which instruction is the best overall</li>
+                </ul>
+                <p class="muted"><strong>Note:</strong> Consider accuracy, clarity, helpfulness, and safety when making your decision.</p>
+            </div>
+
+            <div class="progressline">
+                <div id="progressText">Loading tasks…</div>
+                <div class="progressbar">
+                    <div id="progressFill" class="progressfill"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📹 Image Sequence</h2>
+            <p class="muted" id="imageInfo">Loading…</p>
+            <div class="image-sequence-container">
+                <div class="image-display" id="imageDisplay">
+                    <span class="muted">Loading images…</span>
+                    <div class="frame-counter" id="frameCounter">Frame 0 / 0</div>
+                </div>
+                <div class="playback-controls">
+                    <button class="control-btn" id="playBtn" onclick="togglePlayback()">▶ Play</button>
+                    <button class="control-btn" id="replayBtn" onclick="replaySequence()">↻ Replay</button>
+                    <div class="playback-progress" id="progressBar" onclick="seekTo(event)">
+                        <div class="playback-progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🤖 Instruction Comparison</h2>
+            <p class="muted">Read all three instructions carefully before choosing the best one.</p>
+
+            <div class="comparison-grid">
+                <div class="method-box methodA">
+                    <div class="method-label methodA">Method A</div>
+                    <div class="feedback-text" id="feedbackA">Loading…</div>
+                </div>
+
+                <div class="method-box methodB">
+                    <div class="method-label methodB">Method B</div>
+                    <div class="feedback-text" id="feedbackB">Loading…</div>
+        </div>
+
+                <div class="method-box methodC">
+                    <div class="method-label methodC">Method C</div>
+                    <div class="feedback-text" id="feedbackC">Loading…</div>
+                    </div>
+                    </div>
+                </div>
+
+        <div class="card">
+            <h2>📊 Rating Each Method</h2>
+            <p class="muted">Please rate each method on the following dimensions (1 = Very Poor, 5 = Excellent):</p>
+
+            <div class="rating-section">
+                <div class="rating-grid">
+                    <div class="rating-grid-header">
+                        <div class="dimension-label"></div>
+                        <div class="method-header methodA">Method A</div>
+                        <div class="method-header methodB">Method B</div>
+                        <div class="method-header methodC">Method C</div>
+                    </div>
+
+                    <div class="rating-grid-row">
+                        <div class="dimension-label">Factuality</div>
+                        <div class="likert-container" data-method="Method A">
+                            <div class="likert-scale" id="factuality_A_scale"></div>
+                        </div>
+                        <div class="likert-container" data-method="Method B">
+                            <div class="likert-scale" id="factuality_B_scale"></div>
+                        </div>
+                        <div class="likert-container" data-method="Method C">
+                            <div class="likert-scale" id="factuality_C_scale"></div>
+                        </div>
+                    </div>
+
+                    <div class="rating-grid-row">
+                        <div class="dimension-label">Specificity</div>
+                        <div class="likert-container" data-method="Method A">
+                            <div class="likert-scale" id="specificity_A_scale"></div>
+                        </div>
+                        <div class="likert-container" data-method="Method B">
+                            <div class="likert-scale" id="specificity_B_scale"></div>
+                        </div>
+                        <div class="likert-container" data-method="Method C">
+                            <div class="likert-scale" id="specificity_C_scale"></div>
+                        </div>
+                    </div>
+
+                    <div class="rating-grid-row">
+                        <div class="dimension-label">Safety</div>
+                        <div class="likert-container" data-method="Method A">
+                            <div class="likert-scale" id="safety_A_scale"></div>
+                        </div>
+                        <div class="likert-container" data-method="Method B">
+                            <div class="likert-scale" id="safety_B_scale"></div>
+                        </div>
+                        <div class="likert-container" data-method="Method C">
+                            <div class="likert-scale" id="safety_C_scale"></div>
+                        </div>
+                    </div>
+
+                    <div class="rating-grid-row">
+                        <div class="dimension-label">Helpfulness</div>
+                        <div class="likert-container" data-method="Method A">
+                            <div class="likert-scale" id="helpfulness_A_scale"></div>
+                        </div>
+                        <div class="likert-container" data-method="Method B">
+                            <div class="likert-scale" id="helpfulness_B_scale"></div>
+                        </div>
+                        <div class="likert-container" data-method="Method C">
+                            <div class="likert-scale" id="helpfulness_C_scale"></div>
+                        </div>
+                    </div>
+
+                    <div class="rating-grid-row">
+                        <div class="dimension-label">Conciseness</div>
+                        <div class="likert-container" data-method="Method A">
+                            <div class="likert-scale" id="conciseness_A_scale"></div>
+                        </div>
+                        <div class="likert-container" data-method="Method B">
+                            <div class="likert-scale" id="conciseness_B_scale"></div>
+                        </div>
+                        <div class="likert-container" data-method="Method C">
+                            <div class="likert-scale" id="conciseness_C_scale"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rating-section">
+                <h3>Overall Best Choice</h3>
+                <div class="rating-row">
+                    <div class="rating-question">Which instruction is the best overall?</div>
+                    <div class="rating-description">Consider all dimensions above.</div>
+                    <div class="pairwise-buttons">
+                        <button class="pairwise-btn methodA" onclick="selectBest('A')">Method A is best</button>
+                        <button class="pairwise-btn methodB" onclick="selectBest('B')">Method B is best</button>
+                        <button class="pairwise-btn methodC" onclick="selectBest('C')">Method C is best</button>
+                    </div>
+                    <input type="hidden" id="best_choice" required>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="submitBtn" onclick="submitRatings()">Save & Next Task</button>
+            </div>
+            <p class="error" id="errorMsg"></p>
+            <p class="success" id="successMsg"></p>
+        </div>
+    </div>
+
+    <script>
+        // ---------- Configuration ----------
+        const ENDPOINT = "https://script.google.com/macros/s/AKfycbzFlkvGEtaM5v8TvWS-MXeiE4B_-vabMd7zIDraFYnKorMXLW1i9veKKL--tabUeAGYbw/exec";
+        const USE_LOCAL_STORAGE = false; // Using real endpoint
+        const FRAME_INTERVAL = 1000; // 1 second per frame
+
+        // Helper functions for URL parameters (for consistency with other comparison pages)
+        function qp(name){ const m=new RegExp("[?&]"+name+"=([^&#]*)").exec(location.search); return m?decodeURIComponent(m[1].replace(/\+/g," ")):""; }
+
+        // ---------- Data Structure ----------
+        // Format: { image_urls: [], task_type, feedback_A, feedback_B, feedback_C, method_order }
+        let videos = [];
+        let currentIndex = 0;
+
+        // Image sequence playback state
+        let currentFrame = 0;
+        let isPlaying = false;
+        let playbackInterval = null;
+        let currentImages = [];
+
+        // Load video data from CSV
+        async function loadVideoData() {
+            try {
+                const response = await fetch('input.csv');
+                const csvText = await response.text();
+                const lines = csvText.trim().split('\n');
+                
+                videos = [];
+                for (let i = 1; i < lines.length; i++) { // Skip header row
+                    const values = parseCSVLine(lines[i]);
+                    if (values.length >= 5) {
+                        // Extract folder name and create image URLs
+                        const folderUrl = values[0];
+                        const frameCount = parseInt(values[1]) || 1;
+                        const imageUrls = [];
+                        
+                        // Generate image URLs based on folder and frame count
+                        for (let j = 1; j <= frameCount; j++) {
+                            const frameNum = j.toString().padStart(3, '0');
+                            imageUrls.push(`${folderUrl}/frame_${frameNum}.jpg`);
+                        }
+                        
+                        // Original feedbacks: 0=VLM, 1=sVLM, 2=Ours
+                        const originalFeedbacks = [values[2], values[3], values[4]];
+                        
+                        // Randomize order: create random permutation of [0,1,2]
+                        const methodOrder = [0, 1, 2];
+                        for (let k = methodOrder.length - 1; k > 0; k--) {
+                            const j = Math.floor(Math.random() * (k + 1));
+                            [methodOrder[k], methodOrder[j]] = [methodOrder[j], methodOrder[k]];
+                        }
+                        
+                        videos.push({
+                            image_urls: imageUrls,
+                            task_type: "robotic_guidance",
+                            feedback_A: originalFeedbacks[methodOrder[0]],
+                            feedback_B: originalFeedbacks[methodOrder[1]], 
+                            feedback_C: originalFeedbacks[methodOrder[2]],
+                            method_order: methodOrder, // [x,y,z] means A=original[x], B=original[y], C=original[z]
+                            original_feedbacks: originalFeedbacks // Keep originals for reference
+                        });
+                    }
+                }
+                
+                if (videos.length === 0) {
+                    // Fallback example data if CSV fails
+                    videos = [{
+                        image_urls: ["images/example/frame_001.jpg"],
+                        task_type: "example",
+                        feedback_A: "Method A: Detailed technical feedback about the task performance.",
+                        feedback_B: "Method B: General feedback about improving the approach.",
+                        feedback_C: "Method C: Structured step-by-step guidance for improvement.",
+                        method_order: [0, 1, 2], // No randomization for example
+                        original_feedbacks: ["Method A: Detailed technical feedback about the task performance.", "Method B: General feedback about improving the approach.", "Method C: Structured step-by-step guidance for improvement."]
+                    }];
+                }
+            } catch (error) {
+                console.error('Error loading CSV:', error);
+                // Fallback to example data
+                videos = [{
+                    image_urls: ["images/example/frame_001.jpg"],
+                    task_type: "example",
+                    feedback_A: "Method A: Detailed technical feedback about the task performance.",
+                    feedback_B: "Method B: General feedback about improving the approach.",
+                    feedback_C: "Method C: Structured step-by-step guidance for improvement.",
+                    method_order: [0, 1, 2], // No randomization for example
+                    original_feedbacks: ["Method A: Detailed technical feedback about the task performance.", "Method B: General feedback about improving the approach.", "Method C: Structured step-by-step guidance for improvement."]
+                }];
+            }
+        }
+
+        // Helper function to parse CSV line with quoted fields
+        function parseCSVLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        // ---------- Image Sequence Playback ----------
+        function displayFrame(frameIndex) {
+            if (frameIndex < 0 || frameIndex >= currentImages.length) return;
+
+            currentFrame = frameIndex;
+            const imageDisplay = document.getElementById('imageDisplay');
+            const frameCounter = document.getElementById('frameCounter');
+            const progressFill = document.getElementById('progressFill');
+
+            // Update image
+            imageDisplay.innerHTML = `
+                <img src="${currentImages[frameIndex]}" alt="Frame ${frameIndex + 1}">
+                <div class="frame-counter">Frame ${frameIndex + 1} / ${currentImages.length}</div>
+            `;
+
+            // Update progress bar
+            const progress = ((frameIndex + 1) / currentImages.length) * 100;
+            progressFill.style.width = progress + '%';
+        }
+
+        function togglePlayback() {
+            const playBtn = document.getElementById('playBtn');
+
+            if (isPlaying) {
+                // Pause
+                isPlaying = false;
+                clearInterval(playbackInterval);
+                playBtn.textContent = '▶ Play';
+            } else {
+                // Play
+                isPlaying = true;
+                playBtn.textContent = '⏸ Pause';
+
+                // If at the end, restart from beginning
+                if (currentFrame >= currentImages.length - 1) {
+                    currentFrame = 0;
+                }
+
+                // Start playback
+                playbackInterval = setInterval(() => {
+                    if (currentFrame < currentImages.length - 1) {
+                        displayFrame(currentFrame + 1);
+                    } else {
+                        // Reached the end
+                        isPlaying = false;
+                        clearInterval(playbackInterval);
+                        playBtn.textContent = '▶ Play';
+                    }
+                }, FRAME_INTERVAL);
+            }
+        }
+
+        function replaySequence() {
+            // Stop current playback if playing
+            if (isPlaying) {
+                isPlaying = false;
+                clearInterval(playbackInterval);
+            }
+
+            // Reset to first frame
+            currentFrame = 0;
+            displayFrame(0);
+
+            // Auto-start playback
+            document.getElementById('playBtn').textContent = '⏸ Pause';
+            isPlaying = true;
+            playbackInterval = setInterval(() => {
+                if (currentFrame < currentImages.length - 1) {
+                    displayFrame(currentFrame + 1);
+                } else {
+                    isPlaying = false;
+                    clearInterval(playbackInterval);
+                    document.getElementById('playBtn').textContent = '▶ Play';
+                }
+            }, FRAME_INTERVAL);
+        }
+
+        function seekTo(event) {
+            const progressBar = document.getElementById('progressBar');
+            const rect = progressBar.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const percentage = clickX / rect.width;
+            const targetFrame = Math.floor(percentage * currentImages.length);
+
+            // Pause if playing
+            if (isPlaying) {
+                isPlaying = false;
+                clearInterval(playbackInterval);
+                document.getElementById('playBtn').textContent = '▶ Play';
+            }
+
+            displayFrame(Math.max(0, Math.min(targetFrame, currentImages.length - 1)));
+        }
+
+        // ---------- UI Rendering ----------
+        function createLikertScale(containerId, name) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            for (let i = 1; i <= 5; i++) {
+                const option = document.createElement('div');
+                option.className = 'likert-option';
+                option.innerHTML = `
+                    <input type="radio" id="${name}_${i}" name="${name}" value="${i}" required>
+                    <label for="${name}_${i}">${i}</label>
+                `;
+                container.appendChild(option);
+            }
+        }
+
+        function selectBest(value) {
+            // Update hidden input
+            document.getElementById('best_choice').value = value;
+
+            // Update button styling
+            const buttons = document.querySelectorAll('.pairwise-btn');
+            buttons.forEach(btn => btn.classList.remove('selected'));
+            event.target.classList.add('selected');
+        }
+
+        function renderCurrentVideo() {
+            if (currentIndex >= videos.length) {
+                document.querySelector('.wrap').innerHTML = `
+      <div class="card">
+        <h1>✅ All tasks completed!</h1>
+        <p>Thank you for your ratings. You may close this window.</p>
+      </div>
+    `;
+                return;
+            }
+
+            const video = videos[currentIndex];
+
+            // Update progress
+            document.getElementById('progressText').textContent = `Task ${currentIndex + 1} of ${videos.length}`;
+            document.getElementById('progressFill').style.width = `${(currentIndex / videos.length) * 100}%`;
+
+            // Load image sequence
+            currentImages = video.image_urls;
+            currentFrame = 0;
+            isPlaying = false;
+            if (playbackInterval) {
+                clearInterval(playbackInterval);
+            }
+
+            // Update info
+            document.getElementById('imageInfo').textContent = `Task: ${video.task_type} | ${currentIndex + 1}/${videos.length} | ${currentImages.length} frames`;
+
+            // Display first frame
+            displayFrame(0);
+
+            // Reset playback button
+            document.getElementById('playBtn').textContent = '▶ Play';
+
+            // Update feedback (replace \n with actual newlines)
+            document.getElementById('feedbackA').textContent = video.feedback_A.replace(/\\n/g, '\n');
+            document.getElementById('feedbackB').textContent = video.feedback_B.replace(/\\n/g, '\n');
+            document.getElementById('feedbackC').textContent = video.feedback_C.replace(/\\n/g, '\n');
+            
+            // Debug: log the method order
+            console.log(`Task ${currentIndex + 1} - Method order:`, video.method_order);
+            console.log(`A (${video.method_order[0]}): ${["VLM", "sVLM", "Ours"][video.method_order[0]]}`);
+            console.log(`B (${video.method_order[1]}): ${["VLM", "sVLM", "Ours"][video.method_order[1]]}`);
+            console.log(`C (${video.method_order[2]}): ${["VLM", "sVLM", "Ours"][video.method_order[2]]}`);
+
+            // Reset all ratings
+            document.querySelectorAll('input[type="hidden"]').forEach(input => input.value = '');
+            document.querySelectorAll('.pairwise-btn').forEach(btn => btn.classList.remove('selected'));
+            document.querySelectorAll('input[type="radio"]').forEach(radio => radio.checked = false);
+
+            document.getElementById('errorMsg').textContent = '';
+            document.getElementById('successMsg').textContent = '';
+        }
+
+        // ---------- Validation & Submission ----------
+        function validateRatings() {
+            const bestChoice = document.getElementById('best_choice');
+            if (!bestChoice || !bestChoice.value) {
+                return 'Please select which instruction is best overall';
+            }
+
+            // Check all Likert ratings
+            const dimensions = ['factuality', 'specificity', 'safety', 'helpfulness', 'conciseness'];
+            const methods = ['A', 'B', 'C'];
+            
+            for (const dimension of dimensions) {
+                for (const method of methods) {
+                    const fieldName = `${dimension}_${method}`;
+                    const rating = document.querySelector(`input[name="${fieldName}"]:checked`);
+                    if (!rating) {
+                        return `Please rate ${dimension} for Method ${method}`;
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        async function submitRatings() {
+            const error = validateRatings();
+            if (error) {
+                document.getElementById('errorMsg').textContent = error;
+                return;
+            }
+
+            const video = videos[currentIndex];
+            
+            // Collect all Likert ratings
+            const ratings = {};
+            const dimensions = ['factuality', 'specificity', 'safety', 'helpfulness', 'conciseness'];
+            const methods = ['A', 'B', 'C'];
+            
+            for (const dimension of dimensions) {
+                ratings[dimension] = {};
+                for (const method of methods) {
+                    const fieldName = `${dimension}_${method}`;
+                    const rating = document.querySelector(`input[name="${fieldName}"]:checked`);
+                    ratings[dimension][method] = parseInt(rating.value);
+                }
+            }
+
+            const payload = {
+                prolific_pid: qp("PROLIFIC_PID") || "vlm_comp_test",
+                study_id: qp("STUDY_ID") || "vlm_comparison",
+                session_id: qp("SESSION_ID") || "",
+                task_index: currentIndex,
+                total_tasks: videos.length,
+                image_urls: video.image_urls.join('|'), // Pipe-separated for storage
+                task_type: video.task_type,
+                feedback_A: video.feedback_A,
+                feedback_B: video.feedback_B,
+                feedback_C: video.feedback_C,
+                best_choice: document.getElementById('best_choice').value,
+                method_order: video.method_order.join(','), // [x,y,z] where A=original[x], B=original[y], C=original[z]
+                original_method_names: "VLM,sVLM,Ours",
+                // Flatten ratings for easier storage
+                factuality_A: ratings.factuality.A,
+                factuality_B: ratings.factuality.B,
+                factuality_C: ratings.factuality.C,
+                specificity_A: ratings.specificity.A,
+                specificity_B: ratings.specificity.B,
+                specificity_C: ratings.specificity.C,
+                safety_A: ratings.safety.A,
+                safety_B: ratings.safety.B,
+                safety_C: ratings.safety.C,
+                helpfulness_A: ratings.helpfulness.A,
+                helpfulness_B: ratings.helpfulness.B,
+                helpfulness_C: ratings.helpfulness.C,
+                conciseness_A: ratings.conciseness.A,
+                conciseness_B: ratings.conciseness.B,
+                conciseness_C: ratings.conciseness.C,
+                ts: new Date().toISOString(),
+                ua: navigator.userAgent
+            };
+
+            try {
+                if (USE_LOCAL_STORAGE || ENDPOINT === "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE") {
+                    // Save to localStorage for testing/local development
+                    const existingData = JSON.parse(localStorage.getItem('vlm_comparison_results') || '[]');
+                    existingData.push(payload);
+                    localStorage.setItem('vlm_comparison_results', JSON.stringify(existingData));
+                    
+                    document.getElementById('successMsg').textContent = 'Saved locally! (Check browser localStorage)';
+                    console.log('Saved to localStorage:', payload);
+                    console.log('All results:', existingData);
+                } else {
+                    // Save to backend using the same format as other comparison pages
+                    const body = new URLSearchParams({ data: JSON.stringify(payload) }).toString();
+                    const response = await fetch(ENDPOINT, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: body
+                    });
+
+                    if (!response.ok) throw new Error(`Endpoint error: ${response.status}`);
+
+                    document.getElementById('successMsg').textContent = 'Saved successfully!';
+                }
+
+                setTimeout(() => {
+                    currentIndex++;
+                    renderCurrentVideo();
+                }, 500);
+
+            } catch (err) {
+                console.error('Save error:', err);
+                document.getElementById('errorMsg').textContent = 'Error saving ratings: ' + err.message;
+            }
+        }
+
+        // ---------- Initialization ----------
+        (async function init() {
+            // Create all Likert scales
+            const dimensions = ['factuality', 'specificity', 'safety', 'helpfulness', 'conciseness'];
+            const methods = ['A', 'B', 'C'];
+            
+            for (const dimension of dimensions) {
+                for (const method of methods) {
+                    createLikertScale(`${dimension}_${method}_scale`, `${dimension}_${method}`);
+                }
+            }
+
+            await loadVideoData();
+            renderCurrentVideo();
+        })();
+    </script>
+</body>
+
+</html>
