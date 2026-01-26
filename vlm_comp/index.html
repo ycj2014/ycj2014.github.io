@@ -554,9 +554,9 @@
                 <li>1. Which coaching feedback would be most helpful for this user overall?</li>
                 <li>2. Factuality (1-5 Scale): How factually accurate is the feedback? Are observations grounded in what actually happened in the video?</li>
                 <li>3. Specificity (1-5 Scale): How specific and actionable is the advice? Can the user clearly understand what to do differently?</li>
-                <li>4. Safety (1-5 Scale): How safe would it be to follow this advice? Does it avoid suggesting dangerous actions?</li>
-                <li>5. Helpfulness (1-5 Scale): How helpful would this feedback be for the user to improve their performance?</li>
-                <li>6. Conciseness (1-5 Scale): Is the feedback appropriately concise? Does it communicate efficiently without being too verbose or too brief?</li>
+                <!-- <li>4. Safety (1-5 Scale): How safe would it be to follow this advice? Does it avoid suggesting dangerous actions?</li> -->
+                <li>4. Helpfulness (1-5 Scale): How helpful would this feedback be for the user to improve their performance?</li>
+                <!-- <li>6. Conciseness (1-5 Scale): Is the feedback appropriately concise? Does it communicate efficiently without being too verbose or too brief?</li> -->
             </div>
 
             <div class="progressline">
@@ -1002,7 +1002,8 @@
             }
 
             // Check all Likert ratings
-            const dimensions = ['factuality', 'specificity', 'safety', 'helpfulness', 'conciseness'];
+            // const dimensions = ['factuality', 'specificity', 'safety', 'helpfulness', 'conciseness'];
+            const dimensions = ['factuality', 'specificity', 'helpfulness'];
             const methods = ['A', 'B', 'C'];
             
             for (const dimension of dimensions) {
@@ -1029,7 +1030,8 @@
             
             // Collect all Likert ratings
             const ratings = {};
-            const dimensions = ['factuality', 'specificity', 'safety', 'helpfulness', 'conciseness'];
+            // const dimensions = ['factuality', 'specificity', 'safety', 'helpfulness', 'conciseness'];
+            const dimensions = ['factuality', 'specificity', 'helpfulness'];
             const methods = ['A', 'B', 'C'];
             
             for (const dimension of dimensions) {
@@ -1062,15 +1064,15 @@
                 specificity_A: ratings.specificity.A,
                 specificity_B: ratings.specificity.B,
                 specificity_C: ratings.specificity.C,
-                safety_A: ratings.safety.A,
-                safety_B: ratings.safety.B,
-                safety_C: ratings.safety.C,
+                // safety_A: ratings.safety.A,
+                // safety_B: ratings.safety.B,
+                // safety_C: ratings.safety.C,
                 helpfulness_A: ratings.helpfulness.A,
                 helpfulness_B: ratings.helpfulness.B,
                 helpfulness_C: ratings.helpfulness.C,
-                conciseness_A: ratings.conciseness.A,
-                conciseness_B: ratings.conciseness.B,
-                conciseness_C: ratings.conciseness.C,
+                // conciseness_A: ratings.conciseness.A,
+                // conciseness_B: ratings.conciseness.B,
+                // conciseness_C: ratings.conciseness.C,
                 ts: new Date().toISOString(),
                 ua: navigator.userAgent
             };
@@ -1113,7 +1115,8 @@
         // ---------- Initialization ----------
         (async function init() {
             // Create all Likert scales
-            const dimensions = ['factuality', 'specificity', 'safety', 'helpfulness', 'conciseness'];
+            // const dimensions = ['factuality', 'specificity', 'safety', 'helpfulness', 'conciseness'];
+            const dimensions = ['factuality', 'specificity', 'helpfulness'];
             const methods = ['A', 'B', 'C'];
             
             for (const dimension of dimensions) {
